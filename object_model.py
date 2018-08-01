@@ -38,10 +38,10 @@ class MO:
 
     self.attributes: dict
         keys are class attribute names
-            ex: ['deletable', 'description', 'label']
+            ex: ['deletable', 'description', 'label', 'name']
         values are attribute values
             for class fvAEPg
-            ex: [True, 'A set of requirements for the application-level EPG instance. The policy regulates connectivity and visibility among the end points within the scope of the policy.', 'Application EPG']
+            ex: [True, 'A set of requirements for the application-level EPG instance. The policy regulates connectivity and visibility among the end points within the scope of the policy.', 'Application EPG', 'fv:AEPg']
 
     self.hierarchy: list
         values are lists of strings: names of classes in the container hierarchy,
@@ -54,20 +54,20 @@ class MO:
 
         values are tuples: (properties, label)
             properties: list of dicts representing prefix/property pairs for the class rn
-                containing dicts with keys [prefix, property, delimiter, comments]
+                containing dicts with keys [prefix, property, delimiters, comments]
 
                 RN for fvnsVlanInstP: "vlanns-{[name]}-{allocMode}"
                 properties = [{'prefix': 'vlanns',
                                 'property': 'name',
-                                'delimiter': True,
+                                'delimiters': True,
                                 'comments': 'The VLAN range namespace policy name.'},
                               {'prefix': '',
                                'property': 'allocMode',
-                               'delimiter': False,
+                               'delimiters': False,
                                'comments': 'The allocation mode of the VLAN pool.'}]
-            label: string
-                class label
-                example for fvnsVlanInstP:  'VLAN Pool'
+                label: string
+                    class label
+                    example for fvnsVlanInstP:  'VLAN Pool'
     """
 
     def __init__(self, class_name):
@@ -100,8 +100,15 @@ class MO:
                 payload_parameters[key] = value
 
         #create hierarchy
+        hierarchy = self._ansible_get_hierarchy(all_parameters)
 
-    def _ansible_get_hierarchy(self, all_paramters):
+        return {'class': self.target_class,
+                'keys': all_parameters,
+                'pkeys': payload_parameters,
+                'hierarchy': hierarchy,
+                'doc': doc}
+
+    def _ansible_get_hierarchy(self, all_parameters):
         """return hierarchy list for Ansible context"""
         # TODO figure out choosing DN/container heirarchy
         if len(self.hierarchy) == 0:
@@ -109,18 +116,20 @@ class MO:
 
         chain = self.hierarchy[0]
 
+        hierarchy = []
 
-    def _ansible_construct_rn_strings(self, chain, all_parameters):
-        """construct Python format strings for Ansible RN and filter strings"""
-
+        unnamed_parent = "" # for getting "rn" argument for aci.py contruct_url()
         for class_name in chain:
             components, label = self.naming[class_name]
             label = label.lower().replace(" ", "_")
+            rn_str = ""
+            class_naming = {'name': class_name}
+            naming_args = []
+            naming_props= []
             for component in components:
-
                 # add parameters to dictionary
-                if 'property' in component:
-                    details = {'comments': component['comments']}
+                if component['property'] != '':
+                    details = {'comments': component['comments'], 'naming': True}
                     if class_name != self.target_class:
                         prop = label if component['property'] == "name" else "{0}_{1}".format(label, component['property'])
                         details['var'] = prop
@@ -134,14 +143,66 @@ class MO:
                             details['aliases'] = [label]
                         details['payload'] = component['property']
                     all_parameters[prop] = details
+                    naming_args.append(details['var'])
+                    naming_props.append(component['property'])
 
-                # construct string
-                if component['delimeter']:
-                    rn_str = "{0}-[{{}}]".format(component['prefix'], component['property'])
+                # construct component string
+                print(component.keys())
+                if component['delimiters']:
+                    comp_str = "{0}-[{{}}]".format(component['prefix'], component['property'])
                 elif component['property'] == '':
-                    rn_str = component['prefix']
+                    comp_str = component['prefix']
+                elif component['prefix'] == '':
+                    comp_str = "{}"
                 else:
-                    rn_str = "{0}-{{}}".format(component['prefix'], component['property'])
+                    comp_str = "{0}-{{}}".format(component['prefix'])
+                rn_str = rn_str + comp_str if rn_str == '' else rn_str + "-" + comp_str
+
+            # construct relative name format string
+
+
+            # construct filter string
+            if len(naming_args) != 0:
+                arg_str = "("
+                i = 0
+                while i < len(naming_args) - 1:
+                    arg_str += naming_args[i] + ", "
+                    i += 1
+                arg_str += naming_args[-1] + ")"
+            else:
+                arg_str = "()"
+
+            if len(naming_args) == 0:
+                 filter_str = ""
+            elif len(naming_args) == 1:
+                 filter_str = "\'eq({0}.{1}, \"{{}}\")\'.format({2})".format(class_name, naming_props[0], naming_args[0])
+            else:
+                filter_str = "\'and("
+                i = 0
+                while i < len(naming_args) - 1:
+                    filter_str += "eq({0}.{1}, \"{{}}\"),".format(class_name, naming_props[i])
+                    i += 1
+                filter_str += "eq({0}.{1}, \"{{}}\"))\'.format{2}".format(class_name, naming_props[i], arg_str)
+
+            # prepend parent classes if necessary
+            if '{' not in rn_str and class_name != self.target_class: # unspecified class
+                unnamed_parent += rn_str + "/"
+            elif '{' not in rn_str: # unnamned target class
+                rn_str = unnamed_parent + rn_str
+                class_naming['args'] = [None]
+                class_naming['rn'] = "\'{0}\'".format(rn_str)
+                class_naming['filter'] = "\'\'"
+                hierarchy.append(class_naming)
+            else:
+                rn_str = unnamed_parent + rn_str
+                unnamed_parent = ""
+                class_naming['args'] = naming_args
+                class_naming['rn'] = "\'{0}.format{1}".format(rn_str, arg_str)
+                class_naming['filter'] = filter_str
+                hierarchy.append(class_naming)
+
+        return hierarchy
+
 
     def _initialize_html(self):
         """initialize instance variables using online HTML documentation"""
@@ -170,6 +231,7 @@ class MO:
         self.attributes['label'] = rp['label'].search(html).group(1).strip()
         self.attributes['deletable'] = True if rp['del'].search(html).group(1) == 'yes' else False
         self.attributes['description'] = rp['doc_descr'].search(html).group(1).strip()
+        self.attributes['name'] = rp['name_colon'].search(html).group(1)
 
         # initialize self.hierarchy
         name_text = rp['t_pre'].search(html).group(1) # string containing HTML doc snippet of the RN and DN naming conventions
@@ -203,7 +265,7 @@ class MO:
         Returns
         -------
         name_component_properties: list
-            list of dicts, value is self.naming[class_name]
+            list of dicts, value is self.naming[class_name][0]
             see instance variable documentation
 
         label: str
@@ -234,7 +296,7 @@ class MO:
                 'prefix': prefix,
                 'property': property,
                 'delimiters': delimiters,
-                'comments': comments)}
+                'comments': comments})
 
         return name_component_properties, label
 
