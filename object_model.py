@@ -108,6 +108,16 @@ class MO:
                 'hierarchy': hierarchy,
                 'doc': doc}
 
+
+    def SN_get_context(self):
+        """return information needed to generate a Service Now script"""
+        return {'name': self.target_class,
+                'parent_classes': self.hierarchy[0],
+                'label': self.attributes['label'].lower().replace(" ", "_"),
+                'properties': self.properties.keys(),
+                }
+
+
     def _ansible_get_hierarchy(self, all_parameters):
         """return hierarchy list for Ansible context"""
         # TODO figure out choosing DN/container heirarchy
