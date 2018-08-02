@@ -48,9 +48,9 @@ def main():
     parser = argparse.ArgumentParser(description='Create an Ansible Module for a specified ACI class')
     parser.add_argument('class_name', help='name of the class that the output module will manipulate')
     args = parser.parse_args()
-    logger.info("Creating module for {0}".format(class_name))
 
     class_name = re.sub('[:-]', '', args.class_name)
+    logger.info("Creating module for {0}".format(class_name))
     try:
         doc = MO(class_name=class_name)
         keys = doc.keys
@@ -63,7 +63,7 @@ def main():
                     'doc': doc.doc,
                     'filename': out}
         with open(out, 'w') as f:
-            mod = render('ansible_module.py.j2', context)
+            mod = render('templates/ansible_module.py.j2', context)
             f.write(mod)
     except ModuleGenerationException as e:
         logger.error(e)
