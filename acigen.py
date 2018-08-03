@@ -4,7 +4,9 @@
 import argparse
 import sys
 import logging
-from jinja2 import Environment, FileSystemLoader
+import re
+import json
+from utils import render
 from object_model import MO, ModuleGenerationException
 from ansible_generator import gen_ansible_module
 
@@ -35,16 +37,11 @@ class MyLogger(object):
                 handler.flush()
 
 # Replace stdout with logging to file at INFO level
-sys.stdout = MyLogger(logger, logging.INFO)
+# sys.stdout = MyLogger(logger, logging.INFO)
 # Replace stderr with logging to file at ERROR level
 # sys.stderr = MyLogger(logger, logging.ERROR)
 # ------------------------------------------------------------------------------------
 
-
-
-def render(template_name, context):
-    env = Environment(loader=FileSystemLoader('.'))
-    return env.get_template(template_name).render(context)
 
 def main():
     #TODO: add arguments for other documentation sources
