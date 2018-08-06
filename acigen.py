@@ -9,6 +9,7 @@ import json
 from utils import render
 from object_model import MO, ModuleGenerationException
 from ansible_generator import gen_ansible_module
+from terraform_generator import gen_go_service
 
 # ====================================================================================
 # Logging
@@ -57,11 +58,13 @@ def main():
     logger.info("Creating module for {0}".format(class_name))
     try:
         doc = MO(class_name=class_name)
-        print(doc)
+        # print(json.dumps(doc.terraform_get_context()))
         if args.ansible:
             gen_ansible_module(doc)
         elif args.terraform:
-            pass
+            gen_go_service(doc)
+
+
             
             
     except ModuleGenerationException as e:

@@ -9,16 +9,17 @@ import (
 	"bitbucket.org/crestdatasys/aci-go-client/models"
 )
 
-func (sm *ServiceManager) Create{{doc.slug_label}}(name string, description string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %} ,{{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
-	{{class}} := models.New{{doc.slug_label}}(name, description, {% for object in hierarchy[:-1] %}, {{object.name}} {% endfor  %}, {{class}}attr)
+func (sm *ServiceManager) Create{{doc.slug_label}}(name string, description string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor %}, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
+	{{class}} := models.New{{doc.slug_label}}(name, description{% for object in hierarchy[:-1] %}, {{object.name}}{% endfor  %}, {{class}}attr)
 	err := sm.Save({{class}})
 	return {{class}}, err
 
 }
 
-func (sm *ServiceManager) Read{{doc.slug_label}}(name {% for object in hierarchy[:-1] %}, {{object.name}} string, {% endfor  %}) (*models.{{doc.slug_label}}, error) {
-	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s {% endfor %}" {% for object in hierarchy[:-1] %}, models.{{object.name}}(object.name) {% endfor  %})
-	cont, err := sm.Get(dn)
+func (sm *ServiceManager) Read{{doc.slug_label}}(name {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) (*models.{{doc.slug_label}}, error) {
+	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}){% endfor  %}, models.{{class|capitalize}}(name))
+	
+    cont, err := sm.Get(dn)
 	if err != nil {
 		return nil, err
 	}
@@ -27,24 +28,24 @@ func (sm *ServiceManager) Read{{doc.slug_label}}(name {% for object in hierarchy
 	return {{class}}, nil
 }
 
-func (sm *ServiceManager) Delete{{doc.slug_label}}(name {% for object in hierarchy[:-1] %}, {{object.name}} string, {% endfor  %}) error {
-	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}" {% for object in hierarchy[:-1] %}, models.{{object.name}}(object.name) {% endfor  %})
+func (sm *ServiceManager) Delete{{doc.slug_label}}(name {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) error {
+	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}){% endfor  %},models.{{class|capitalize}}(name))
 
-	return sm.DeleteByDn(dn, models.{{class}}ClassName)
+	return sm.DeleteByDn(dn, models.{{class|capitalize}}ClassName)
 }
 
 func (sm *ServiceManager) Update{{doc.slug_label}}(name, description string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
-	{{class}} := models.New{{doc.slug_label}}(name, description, {% for object in hierarchy[:-1] %}, {{object.name}} {% endfor  %}, {{class}}attr)	
+	{{class}} := models.New{{doc.slug_label}}(name, description {% for object in hierarchy[:-1] %}, {{object.name}} {% endfor  %}, {{class}}attr)	
     {{class}}.Status = "modified"
 	err := sm.Save({{class}})
 	return {{class}}, err
 
 }
 
-func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1] %}, {{object.name}} string, {% endfor  %} string) ([]*models.{{doc.slug_label}}, error) {
+func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1] %}{{object.name}} string {%if loop.index != hierarchy[:-1]|length %},{% endif %}{% endfor  %}) ([]*models.{{doc.slug_label}}, error) {
 
 	baseurlStr := "/api/node/class"	
-	dn := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s.json", baseurlStr {% for object in hierarchy[:-1] %}, models.{{object.name}}({{object.name}}) {% endfor  %}, models.{{class}}ClassName)
+	dn := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s.json", baseurlStr {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}) {% endfor  %}, models.{{class|capitalize}}ClassName)
     
     cont, err := sm.GetViaURL(urlStr)
 	list := models.{{doc.slug_label}}ListFromContainer(cont)
