@@ -108,6 +108,35 @@ class MO:
                 'hierarchy': hierarchy,
                 'doc': doc}
 
+    def terraform_get_context(self):
+        """return information needed to generate an Ansible module for target class"""
+        all_parameters = self.properties # TODO deep copy this
+        for key, value in all_parameters.items(): # set python variable name for Ansible module, avoid keywords
+            value['payload'] = key
+            if iskeyword(key):
+                value['var'] = "_" + key
+            else:
+                value['var'] = key
+
+        doc = self.attributes
+
+        doc["slug_label"] = doc["label"].replace(" ","")
+
+        #create payload keys, properties in aci json payload only
+        payload_parameters = {} #target class properties only
+        for key, value in all_parameters.items():
+            if "payload" in value:
+                payload_parameters[key] = value
+
+        #create hierarchy
+        hierarchy = self._ansible_get_hierarchy(all_parameters)
+
+        return {'class': self.target_class,
+                'keys': all_parameters,
+                'pkeys': payload_parameters,
+                'hierarchy': hierarchy,
+                'doc': doc}
+
 
     def SN_get_context(self):
         """return information needed to generate a Service Now script"""
