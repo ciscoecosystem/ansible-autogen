@@ -1,3 +1,90 @@
 package models
 
 
+import (
+	"fmt"
+
+	"bitbucket.org/crestdatasys/aci-go-client/container"
+)
+
+const {{class|capitalize}}ClassName = "{{class}}"
+
+type {{doc.slug_label}} struct {
+	BaseAttributes
+    {%if pkeys|length != 0 %}
+	{{doc.slug_label}}Attributes
+    {%endif %} 
+}
+
+func {{class|capitalize}}({{class}}Name string) string {
+	return fmt.Sprintf("{{doc.prefix}}-%s", {{class}}Name)
+}
+  {%if pkeys|length != 0 %}
+type {{doc.slug_label}}Attributes struct {
+
+    {% for key in pkeys.keys() %}
+	{{key|capital}}       string
+    {% endfor
+}
+  {%endif %} 
+
+func {{class|capitalize}}(name string) string {
+    return fmt.Sprintf("{{rn}}",name)
+}
+
+func New{{doc.slug_label}}(name, description, {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}), {{class}}attr {{doc.slug_label}}Attributes) *{{doc.slug_label}} {
+	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, {{object.name|capitalize}}({{object.name}}){% endfor  %}, {{class|capitalize}}(name))
+	
+    return &{{doc.slug_label}}{
+		BaseAttributes: BaseAttributes{
+			DistinguishedName: dn,
+			Description:       description,
+			Status:            "created, modified",
+			ClassName:         {{class|capitalize}}ClassName,
+			Rn:                {{class|capitalize}}(name),
+		},
+        {%if pkeys|length != 0 %}
+		{{doc.slug_label}}Attributes: {{class}attr,
+        {%endif %} 
+	}
+}
+
+func ({{class}} *{{doc.slug_label}}) ToMap() (map[string]string, error) {
+	{{class}}Map, err := {{class}}.BaseAttributes.ToMap()
+	if err != nil {
+		return nil, err
+	}
+
+    {% for key in pkeys.keys() %}
+	A({{class}}Map, "{{key}}",{{class}}.{{key|capital}})
+    {% endfor %}
+	
+
+	return {{class}}Map, err
+}
+
+func {{doc.slug_label}}FromContainerList(cont *container.Container, index int) *BridgeDomain {
+
+	{{doc.slug_label}}Cont := cont.S("imdata").Index(index).S({{class|capitalize}}ClassName, "attributes")
+	return &{{doc.slug_label}}{
+		BaseAttributes{
+			DistinguishedName: G({{doc.slug_label}}Cont, "dn"),
+			Description:       G({{doc.slug_label}}Cont, "descr"),
+			Status:            G({{doc.slug_label}}Cont, "status"),
+			ClassName:         {{class|capitalize}}ClassName,
+			Rn:                G({{doc.slug_label}}Cont, "rn"),
+		},
+        {%if pkeys|length != 0 %}
+		{{doc.slug_label}}Attributes{
+        {% for key in pkeys.keys() %}
+	        {{key|capital}} : G({{doc.slug_label}}Cont, "{{key}}"),
+        {% endfor %}		
+        },
+        {% endif %}
+	}
+}
+
+func {{doc.slug_label}}FromContainer(cont *container.Container) *{{doc.slug_label}} {
+
+	return {{doc.slug_label}}FromContainerList(cont, 0)
+}

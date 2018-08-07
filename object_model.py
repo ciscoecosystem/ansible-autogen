@@ -25,6 +25,9 @@ rp = {  'cleanr': re.compile("<.*?>"),
         't_pre': re.compile("<pre>(.*?)</pre>", re.DOTALL),
         }
 
+# keys that are to be ignored in the 
+ignore_set = set(["descr","lcOwn","name","ownerKey", "ownerTag", "pcTag", "uid"])
+
 class MO:
     """
     Gets all necessary class properties of an ACI class to create a corresponding
@@ -120,6 +123,14 @@ class MO:
 
         doc = self.attributes
 
+        # if it works it works
+        try:
+            doc["prefix"] = self.naming[self.target_class][0][0]["prefix"]
+        except:
+            pass
+
+        all_parameters = {k: v for k, v in all_parameters.items() if k not in ignore_set}
+        
         doc["slug_label"] = doc["label"].replace(" ","")
 
         #create payload keys, properties in aci json payload only
@@ -145,6 +156,104 @@ class MO:
                 'label': self.attributes['label'].lower().replace(" ", "_"),
                 'properties': self.properties.keys(),
                 }
+
+
+    def _terraform_get_hierarchy(self, all_parameters):
+        """return hierarchy list for Ansible context"""
+        # TODO figure out choosing DN/container heirarchy
+        if len(self.hierarchy) == 0:
+            raise InvalidDNException("Documentation does not contain DN info")
+
+        chain = self.hierarchy[0]
+
+        hierarchy = []
+
+        unnamed_parent = "" # for getting "rn" argument for aci.py contruct_url()
+        for class_name in chain:
+            components, label = self.naming[class_name]
+            label = label.lower().replace(" ", "_")
+            rn_str = ""
+            class_naming = {'name': class_name}
+            naming_args = []
+            naming_props= []
+            for component in components:
+                # add parameters to dictionary
+                if component['property'] != '':
+                    details = {'comments': component['comments'], 'naming': True}
+                    if class_name != self.target_class:
+                        prop = label if component['property'] == "name" else "{0}_{1}".format(label, component['property'])
+                        details['var'] = prop
+                    else:
+                        prop = component['property']
+                        if iskeyword(component['property']):
+                            details['var'] = "_{0}".format(component['property'])
+                        else:
+                            details['var'] = component['property']
+                        if component['property'] == 'name':
+                            details['aliases'] = [label]
+                        details['payload'] = component['property']
+                    all_parameters[prop] = details
+                    naming_args.append(details['var'])
+                    naming_props.append(component['property'])
+
+                # construct component string
+                print(component.keys())
+                if component['delimiters']:
+                    comp_str = "{0}-[{{}}]".format(component['prefix'], component['property'])
+                elif component['property'] == '':
+                    comp_str = component['prefix']
+                elif component['prefix'] == '':
+                    comp_str = "{}"
+                else:
+                    comp_str = "{0}-%s".format(component['prefix'])
+                rn_str = rn_str + comp_str if rn_str == '' else rn_str + "-" + comp_str
+                print("rn_str",rn_str,"comp_str",comp_str)
+
+            # construct relative name format string
+
+
+            # construct filter string
+            if len(naming_args) != 0:
+                arg_str = "("
+                i = 0
+                while i < len(naming_args) - 1:
+                    arg_str += naming_args[i] + ", "
+                    i += 1
+                arg_str += naming_args[-1] + ")"
+            else:
+                arg_str = "()"
+
+            if len(naming_args) == 0:
+                 filter_str = ""
+            elif len(naming_args) == 1:
+                 filter_str = "\'eq({0}.{1}, \"{{}}\")\'.format({2})".format(class_name, naming_props[0], naming_args[0])
+            else:
+                filter_str = "\'and("
+                i = 0
+                while i < len(naming_args) - 1:
+                    filter_str += "eq({0}.{1}, \"{{}}\"),".format(class_name, naming_props[i])
+                    i += 1
+                filter_str += "eq({0}.{1}, \"{{}}\"))\'.format{2}".format(class_name, naming_props[i], arg_str)
+
+            # prepend parent classes if necessary
+            if '{' not in rn_str and class_name != self.target_class: # unspecified class
+                unnamed_parent += rn_str + "/"
+            elif '{' not in rn_str: # unnamned target class
+                rn_str = unnamed_parent + rn_str
+                class_naming['args'] = [None]
+                class_naming['rn'] = "\'{0}\'".format(rn_str)
+                class_naming['filter'] = "\'\'"
+                hierarchy.append(class_naming)
+            else:
+                rn_str = unnamed_parent + rn_str
+                unnamed_parent = ""
+                class_naming['args'] = naming_args
+                class_naming['rn'] = "\'{0}.format{1}".format(rn_str, arg_str)
+                class_naming['filter'] = filter_str
+                hierarchy.append(class_naming)
+
+        return hierarchy
+
 
 
     def _ansible_get_hierarchy(self, all_parameters):
@@ -196,6 +305,7 @@ class MO:
                 else:
                     comp_str = "{0}-{{}}".format(component['prefix'])
                 rn_str = rn_str + comp_str if rn_str == '' else rn_str + "-" + comp_str
+                print("rn_str",rn_str,"comp_str",comp_str)
 
             # construct relative name format string
 

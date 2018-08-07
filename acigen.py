@@ -58,7 +58,7 @@ def main():
     logger.info("Creating module for {0}".format(class_name))
     try:
         doc = MO(class_name=class_name)
-        # print(json.dumps(doc.terraform_get_context()))
+        print(json.dumps(doc.terraform_get_context()))
         if args.ansible:
             gen_ansible_module(doc)
         elif args.terraform:
