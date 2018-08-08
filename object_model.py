@@ -73,7 +73,7 @@ class MO:
                     example for fvnsVlanInstP:  'VLAN Pool'
     """
 
-    def __init__(self, class_name):
+    def __init__(self, class_name, meta=None):
         """Gathers all relevant properties of a ACI class as instance variables"""
         self.target_class = class_name
         self.properties = {}
@@ -81,8 +81,10 @@ class MO:
         self.hierarchy = []
         self.naming = {}
 
-        self._initialize_html()
-
+        if not meta:
+            self._initialize_html()
+        else:
+            self._initialize_json_meta(meta)
 
     def ansible_get_context(self):
         """return information needed to generate an Ansible module for target class"""
@@ -110,6 +112,7 @@ class MO:
                 'pkeys': payload_parameters,
                 'hierarchy': hierarchy,
                 'doc': doc}
+
 
     def terraform_get_context(self):
         """return information needed to generate an Ansible module for target class"""
@@ -149,6 +152,7 @@ class MO:
                 'doc': doc}
 
 
+
     def SN_get_context(self):
         """return information needed to generate a Service Now script"""
         return {'name': self.target_class,
@@ -156,6 +160,7 @@ class MO:
                 'label': self.attributes['label'].lower().replace(" ", "_"),
                 'properties': self.properties.keys(),
                 }
+
 
 
     def _terraform_get_hierarchy(self, all_parameters):
@@ -397,6 +402,67 @@ class MO:
         for class_name in class_names:
             properties, label = MO._get_class_naming(class_name)
             self.naming[class_name]= (properties, label)
+
+
+    def _initialize_json_meta(self, meta):
+        """meta: str"""
+        metad = json.loads(meta)
+        class_meta = metad['classes'][self.target_class]
+
+        # initialize self.properties
+        for key, value in class_meta['properties'].items():
+            if value['isConfigurable']:
+                self.properties[key] = {'options': list(value['options'].keys()),
+                                        'label': value['label']}
+
+        # initialize self.attributes
+        self.attributes['label'] = class_meta['label']
+        self.attributes['deletable'] = class_meta['isDeletable']
+        self.attributes['description'] = class_meta['help']
+        self.attributes['name'] = class_meta['name']
+        self.attributes['abstract'] = class_meta['isAbstract']
+        self.attributes['configurable'] = class_meta['isConfigurable']
+
+        # initialize self.hierarchy
+        class_names = set() # keys for self.naming
+
+        def add_hierarchy(class_name, children):
+            """add lists of container hierarchy"""
+            children.insert(0, class_name)
+            if class_name == "polUni":
+                self.hierarchy.append(children)
+                class_names.update(children)
+                return
+            containers = metad['classes'][class_name]['containers']
+            for mo in containers:
+                add_hierarchy(mo, children[:])
+
+        add_hierarchy(self.target_class, [])
+
+
+        # initialize self.naming
+        for class_name in class_names:
+            rn_text = class_meta['rnFormat']
+            name_comp = rp['dn_component'].findall(rn_text)
+            name_component_properties = []
+            for comp in name_comp:
+                match = rp['dn_prefix_prop'].search(comp)
+                prefix = '' if not match.group(1) else match.group(1)
+                property = '' if not match.group(3) else match.group(3)
+                delimiters = False if not match.group(2) else '[' in match.group(2)
+
+                if property != '': # get comments on property if it exists
+                    comments = metad['classes'][class_name]['properties'][property]['label']
+                else:
+                    comments = None
+
+                name_component_properties.append({
+                    'prefix': prefix,
+                    'property': property,
+                    'delimiters': delimiters,
+                    'comments': comments})
+
+            self.naming[class_name] = name_component_properties
 
     @staticmethod
     def _clean_html(raw_html):
