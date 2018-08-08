@@ -1,0 +1,163 @@
+package aci
+
+import (
+	"fmt"
+
+	"bitbucket.org/crestdatasys/aci-go-client/client"
+	"bitbucket.org/crestdatasys/aci-go-client/models"
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
+)
+
+func resourceAci{{doc.slug_label}}() *schema.Resource {
+	return &schema.Resource{
+		Create: resourceAci{{doc.slug_label}}Create,
+		Update: resourceAci{{doc.slug_label}}Update,
+		Read:   resourceAci{{doc.slug_label}}Read,
+		Delete: resourceAci{{doc.slug_label}}Delete,
+
+		Importer: &schema.ResourceImporter{
+			State: resourceAci{{doc.slug_label}}Import,
+		},
+
+		SchemaVersion: 1,
+
+		Schema: AppendBaseAttrSchema(map[string]*schema.Schema{
+			"{{doc.parent}}_dn": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+			},
+            {%for key, prop in pkeys.items() %}
+			"{{key|snakify}}": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+                {% if prop["options"]| length != 0 %}
+				ValidateFunc: validation.StringInSlice([]string{
+				{%for option in prop["options"] %}
+                 	"{{option}}",
+                {% endfor %}
+				}, false),
+                {% endif %}
+			},
+            {% endfor %}
+		}),
+	}
+}
+
+func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{doc.slug_label}}, error) {
+	{{class}}, err := client.Read{{doc.slug_label}}(models.GetMOName(dn), models.GetMOName(GetParentDn(dn)))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if {{class}}.DistinguishedName == "{}" {
+		return nil, fmt.Errorf("Bridge Domain %s not found", {{class}}.DistinguishedName)
+	}
+
+	return {{class}}, nil
+}
+
+func set{{doc.slug_label}}Attributes({{class}} *models.{{doc.slug_label}}, d *schema.ResourceData) *schema.ResourceData {
+	d.SetId({{class}}.DistinguishedName)
+	d.Set("name", GetMOName(bd.DistinguishedName))
+	d.Set("description", bd.Description)
+	d.Set("tenant_dn", GetParentDn(bd.DistinguishedName))
+    {% for key in pkeys.keys() %} 
+	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
+    {% endfor %}
+	return d
+}
+
+func resourceAci{{doc.slug_label}}Import(d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	aciClient := m.(*client.Client)
+
+	dn := d.Id()
+
+	bd, err := getRemote{{doc.slug_label}}(aciClient, dn)
+
+	if err != nil {
+		return nil, err
+	}
+	schemaFilled := set{{doc.slug_label}}Attributes(bd, d)
+	return []*schema.ResourceData{schemaFilled}, nil
+}
+
+func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) error {
+
+	aciClient := m.(*client.Client)
+	name := d.Get("name").(string)
+	desc := d.Get("description").(string)
+	tenantDn := d.Get("tenant_dn").(string)
+	{{class}}Attr := models.{{doc.slug_label}}Attributes{}
+
+    {% for key in pkeys.keys() %} 
+
+	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
+    
+    if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
+        {{class}}Attr = {{key}}.(string)
+    }
+    {% endfor %}
+
+    // TODO manage parent child relationship
+	{{class}}, err := aciClient.Create{{doc.slug_label}}(name, desc, models.GetMOName(tenantDn), {{class}}Attr)
+
+	if err != nil {
+		return err
+	}
+
+	d.SetId({{class}}.DistinguishedName)
+	return resourceAci{{doc.slug_label}}Read(d, m)
+}
+
+func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) error {
+	aciClient := m.(*client.Client)
+	name := d.Get("name").(string)
+	desc := d.Get("description").(string)
+	tenantDn := d.Get("tenant_dn").(string)
+
+    {{class}}Attr := models.{{doc.slug_label}}Attributes{}
+
+    {% for key in pkeys.keys() %} 
+
+	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
+    
+    if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
+        {{class}}Attr = {{key}}.(string)
+    }
+    {% endfor %}
+
+	{{class}}, err := aciClient.Update{{doc.slug_label}}(name, desc, models.GetMOName(tenantDn), {{class}}Attr)
+	if err != nil {
+		return err
+	}
+
+	d.SetId({{class}}.DistinguishedName)
+	return resourceAci{{doc.slug_label}}Read(d, m)
+
+}
+
+func resourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) error {
+	aciClient := m.(*client.Client)
+
+	dn := d.Id()
+
+	bd, err := getRemote{{doc.slug_label}}(aciClient, dn)
+
+	if err != nil {
+		return err
+	}
+	_ = set{{doc.slug_label}}Attributes(bd, d)
+	return nil
+}
+
+func resourceAci{{doc.slug_label}}Delete(d *schema.ResourceData, m interface{}) error {
+	aciClient := m.(*client.Client)
+
+    // TODO manage parent child relationship
+	err := aciClient.Delete{{doc.slug_label}}(models.GetMOName(d.Id()), models.GetMOName(GetParentDn(d.Id())))
+
+	return err
+}
