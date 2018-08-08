@@ -63,6 +63,8 @@ def main():
             gen_ansible_module(doc)
         elif args.terraform:
             gen_go_service(doc)
+            gen_go_module(doc)
+            gen_terraform_resource(doc)
 
 
             
