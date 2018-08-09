@@ -17,13 +17,9 @@ rp = {  'abstract': re.compile("Class (.*?) (\(\w+\))"),
         'doc_descr': re.compile("</h4>(.*?)<br/>\s+<br/>.*?NAMING RULE", re.DOTALL),
         'href': re.compile("href=\"MO-(.*?).html"),
         'label': re.compile("Class Label:(.*)"),
-        'name_colon': re.compile("mo\[(.+?)\]"),
-        'name_split': re.compile("([a-zA-Z]+):([a-zA-Z]+)"),
         'prop_name': re.compile("<h3>([a-zA-Z]+)</h3>"),
         'prop_options': re.compile("<font size=\"-1\"> (.*?) </font>"),
         'rn_format': re.compile("RN FORMAT:(.*)"),
-        'rn_prefix': re.compile("PREFIX=(.*?)[-\n]"),
-        't_a': re.compile("<a.*?>(.*?)</a>", re.DOTALL),
         't_pre': re.compile("<pre>(.*?)</pre>", re.DOTALL),
         }
 
@@ -33,7 +29,16 @@ class MIM:
     """
 
     def __init__(self, meta=None):
-        """Creates dictionary containing ACI MIM information"""
+        """
+        Creates dictionary containing ACI MIM information
+
+        Parameters
+        ----------
+        meta : str
+            string contents of the meta json file
+            if not provided, class information is pulled through online documentation
+        """
+
         if not meta:
             self.meta = {}
         else:
@@ -41,6 +46,16 @@ class MIM:
             self.meta = metad['classes']
 
     def get_class(self, class_name):
+        """
+        Parameters
+        ----------
+        class_name : str
+            name of ACI class with package name and no delimiters
+        Returns
+        -------
+        MO
+            instance corresponding to class_name
+        """
         if class_name not in self.meta:
             self._add_class(class_name)
         if 'dnFormat' not in self.meta[class_name]:
@@ -52,17 +67,19 @@ class MIM:
         """Add the DNs for a specific class, only if initialized by meta file"""
         dns = []
 
-        def add_dn_helper(class_name, dn):
+        def add_dn_helper(class_name, dn, class_list):
             """add lists of container hierarchy"""
             containers = self.meta[class_name]['containers']
             if 'topRoot' in containers:
-                dns.append(dn)
+                dns.append((dn, class_list))
                 return
-            updated_dn = self.meta[class_name]['rnFormat'] + '/' + dn
             for mo in containers:
-                add_dn_helper(mo, updated_dn)
+                updated_dn = self.meta[mo]['rnFormat'] + '/' + dn
+                updated_class = class_list[:]
+                updated_class.insert(0, mo)
+                add_dn_helper(mo, updated_dn, updated_class)
 
-        add_dn_helper(class_name, self.meta[class_name]['rnFormat'])
+        add_dn_helper(class_name, self.meta[class_name]['rnFormat'], [class_name])
         self.meta[class_name]['dnFormat'] = dns
 
     def _add_class(self, class_name):
@@ -224,7 +241,11 @@ class MO:
         Returns
         -------
         list
-            list of strings: all possible DN formats
+            list of tuples: (format, classes)
+                format: str
+                    DN format string
+                classes: list
+                    names of correspoding classes in the DN
         """
         return self.meta['dnFormat']
 
