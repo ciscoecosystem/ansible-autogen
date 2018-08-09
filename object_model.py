@@ -14,12 +14,14 @@ rp = {  'abstract': re.compile("Class (.*?) (\(\w+\))"),
         'dn_component': re.compile("(?:\w+-\{.+?\})|(?:\w+)|(?:\{.+?\})"),
         'dn_prefix_prop': re.compile("(\w+)?-?(\{\[?(\w+)\]?\})?"),
         'dn_line': re.compile("\[[0-9]*\] (.*)"),
+        'dn_classes': re.compile("<a href=\"MO-(\w+).html"),
         'doc_descr': re.compile("</h4>(.*?)<br/>\s+<br/>.*?NAMING RULE", re.DOTALL),
         'href': re.compile("href=\"MO-(.*?).html"),
         'label': re.compile("Class Label:(.*)"),
         'prop_name': re.compile("<h3>([a-zA-Z]+)</h3>"),
         'prop_options': re.compile("<font size=\"-1\"> (.*?) </font>"),
         'rn_format': re.compile("RN FORMAT:(.*)"),
+        'rn_component': re.compile("\{[?(\w+)]?\}"),
         't_pre': re.compile("<pre>(.*?)</pre>", re.DOTALL),
         }
 
@@ -102,7 +104,7 @@ class MIM:
 
         rn_text = rp['rn_format'].search(r.text).group(1).strip()
         rn_text = MIM._clean_html(rn_text)
-        name_comp = rp['dn_component'].findall(rn_text)
+        name_comp = rp['rn_component'].findall(rn_text)
         class_dict['identifiedBy'] = name_comp
         class_dict['rnFormat'] = rn_text
 
@@ -111,6 +113,7 @@ class MIM:
         num_total = len(all_properties)
         property_doc_tags = rp['t_pre'].findall(html)[4:] # html doc corresponding to each property; first 4 always other docs, no properties
 
+        properties = {}
         for i in range(num_total):
             cur = all_properties[i]
             details = {}
@@ -118,7 +121,8 @@ class MIM:
             options = MIM._get_property_details(cur, html)
             details['options'] = options
             details['label'] = self._get_property_comments(cur, html)
-            class_dict[cur] = details
+            properties[cur] = details
+        class_dict['properties'] = properties
 
         # get containment info
         contained_match = rp['contained_section'].search(html)
@@ -141,7 +145,12 @@ class MIM:
         name_text = rp['t_pre'].search(html).group(1)
         dn_match = rp['dn_format'].search(name_text)
         dn_text = dn_match.group(1)
-        class_dict['dnFormat'] = list(map(MIM._clean_html, rp['dn_line'].findall(dn_text)))
+
+        dn_lines = rp['dn_line'].findall(dn_text)
+        # dn_classes = [rp['dn_classes'].findall(line) for line in dn_lines]
+
+        class_dict['dnFormat'] = [(MIM._clean_html(line), rp['dn_classes'].findall(line)) for line in dn_lines]
+        # list(map(MIM._clean_html, rp['dn_line'].findall(dn_text)))
 
         self.meta[class_name] = class_dict
 
@@ -248,6 +257,16 @@ class MO:
                     names of correspoding classes in the DN
         """
         return self.meta['dnFormat']
+
+    @property
+    def identifiedBy(self):
+        """
+        Returns
+        -------
+        list
+            list of strings: ordered naming properties
+        """
+        return self.meta['identifiedBy']
 
 
     @property
