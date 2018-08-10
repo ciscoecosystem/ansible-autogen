@@ -119,7 +119,7 @@ class MIM:
             details = {}
             details['isConfigurable'] = "admin" in property_doc_tags[i] or "naming" in property_doc_tags[i]
             options = MIM._get_property_details(cur, html)
-            details['options'] = options
+            details['options'] = {option: option for option in options}
             details['label'] = self._get_property_comments(cur, html)
             properties[cur] = details
         class_dict['properties'] = properties
