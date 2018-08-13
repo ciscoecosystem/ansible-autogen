@@ -1,6 +1,5 @@
 import re
 import requests
-import sys
 import json
 
 # Dictionary of Regex Patterns to pull properties from documentation html files:
@@ -58,9 +57,9 @@ class MIM:
         MO
             instance corresponding to class_name
         """
-        if class_name not in self.meta:
+        if class_name not in self.meta: # first request for class when initialized without meta
             self._add_class(class_name)
-        if 'dnFormat' not in self.meta[class_name]:
+        if 'dnFormat' not in self.meta[class_name]: # first request for class when initialized with meta
             self._add_dn(class_name)
 
         return MO(class_name, self.meta[class_name])
