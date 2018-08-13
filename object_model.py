@@ -355,8 +355,3 @@ class InvalidDNException(ModuleGenerationException):
 class InvalidURLException(ModuleGenerationException):
     def __init__(self, *args, **kwargs):
         ModuleGenerationException.__init__(self,*args,**kwargs)
-
-with open('/Users/mlinhe/.aci-meta/aci-meta.json', 'r') as f:
-    meta = f.read()
-    a = MIM()
-    b = a.get_class('commHttp')
