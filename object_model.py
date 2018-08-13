@@ -71,6 +71,8 @@ class MIM:
         def add_dn_helper(class_name, dn, class_list):
             """add lists of container hierarchy"""
             containers = self.meta[class_name]['containers']
+            if len(containers) > 100:
+                raise ModuleGenerationException()
             if 'topRoot' in containers:
                 dns.append((dn, class_list))
                 return
@@ -97,11 +99,14 @@ class MIM:
         class_dict['name'] = rp['abstract'].search(html).group(1)
         class_dict['isAbstract'] = rp['abstract'].search(html).group(2) == 'ABSTRACT'
         class_dict['isConfigurable'] = rp['configurable'].search(html).group(1) == 'true'
-        # class_dict['isContextRoot'] = classMeta.isContextRoot()
         class_dict['isDeletable'] = True if rp['del'].search(html).group(1) == 'yes' else False
         class_dict['help'] = rp['doc_descr'].search(html).group(1).strip()
 
-        rn_text = rp['rn_format'].search(r.text).group(1).strip()
+        rn_text = rp['rn_format'].search(r.text)
+        if not rn_text:
+            rn_text = rn_text.group(1).strip()
+        else:
+            rn_text = ''
         rn_text = MIM._clean_html(rn_text)
         name_comp = rp['rn_component'].findall(rn_text)
         class_dict['identifiedBy'] = name_comp
@@ -350,3 +355,8 @@ class InvalidDNException(ModuleGenerationException):
 class InvalidURLException(ModuleGenerationException):
     def __init__(self, *args, **kwargs):
         ModuleGenerationException.__init__(self,*args,**kwargs)
+
+with open('/Users/mlinhe/.aci-meta/aci-meta.json', 'r') as f:
+    meta = f.read()
+    a = MIM()
+    b = a.get_class('commHttp')
