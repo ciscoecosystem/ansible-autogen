@@ -1,0 +1,110 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
+DOCUMENTATION = r'''
+---
+module: {{filename[:-3]}}
+short_description: Manage {{doc.label}} ({{doc.name}})
+description:
+- {{doc.descr}}
+notes:
+- More information about the internal APIC class B({{doc.name}}) from
+  L(the APIC Management Information Model reference,https://developer.cisco.com/docs/apic-mim-ref/).
+author:
+- Maxwell Lin-He (@maxyso)
+version_added: '2.7'
+options: {% for key, value in keys.items() %}
+  {{key}}:
+    description:
+    - {{value.label}} {% if value.aliases %}
+    aliases: [ {% for x in value.aliases %}{%if not loop.last %}{{x}}, {% endif %}{% endfor %}{{value.aliases[-1]}} ] {% endif %}{% if value.options %}
+    choices: [ {% for x in value.options %}{%if not loop.last %}{{x}}, {% endif %}{% endfor %}{{value.options[-1]}} ] {% endif %}{% endfor %}
+  state: {% if doc.deletable %}
+    description:
+    - Use C(present) or C(absent) for adding or removing.
+    - Use C(query) for listing an object or multiple objects.
+    choices: [ absent, present, query ]
+    default: present {% else %}
+    description:
+    - Use C(present) for configuring an object.
+    - Use C(query) for listing an object or multiple objects.
+    choices: [ present, query ]
+    default: present {% endif %}
+
+extends_documentation_fragment: aci
+'''
+
+from ansible.module_utils.network.aci.aci import ACIModule, aci_argument_spec
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    argument_spec = aci_argument_spec()
+    argument_spec.update({ {% for key, value in keys.items()%}
+        '{{key}}': dict(type='str',{%if value['options']|length > 0 %} choices={{value['options']}}, {% endif %}{%if value['aliases']|length > 0 %} aliases={{value['aliases']}}{% endif %}),{% endfor %}
+        'state': dict(type='str', default='present', choices=['absent', 'present', 'query']),
+    })
+
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        supports_check_mode=True,
+        required_if=[ {% if doc.deletable %}
+            ['state', 'absent', [{% for key, value in keys.items() %}{% if value['naming']==true %}'{{key}}', {% endif %}{% endfor %}]], {% endif %}
+            ['state', 'present', [{% for key, value in keys.items() %}{% if value['naming']==true %}'{{key}}', {% endif %}{% endfor %}]],
+        ],
+    )
+    {% for key, value in keys.items() %}
+    {{value.var}} = module.params['{{key}}']{% endfor %}
+    state = module.params['state']
+
+    aci = ACIModule(module)
+    aci.construct_url({% for object in hierarchy %}{% if loop.index0 == 0 %}
+        root_class={
+            'aci_class': '{{object.name}}',
+            'aci_rn': {{object.rn}},
+            'filter_target': {{object.filter}},
+            'module_object': {{object.args[0]}}
+        }, {% endif %}{% if loop.index0 == 1 %}
+        subclass_1={
+            'aci_class': '{{object.name}}',
+            'aci_rn': {{object.rn}},
+            'filter_target': {{object.filter}},
+            'module_object': {{object.args[0]}}
+        }, {% endif %}{% if loop.index0 == 2 %}
+        subclass_2={
+            'aci_class': '{{object.name}}',
+            'aci_rn': {{object.rn}},
+            'filter_target': {{object.filter}},
+            'module_object': {{object.args[0]}}
+        }, {% endif %}{% if loop.index0 == 3 %}
+        subclass_3={
+            'aci_class': '{{object.name}}',
+            'aci_rn': {{object.rn}},
+            'filter_target': {{object.filter}},
+            'module_object': {{object.args[0]}}
+        }, {% endif %}{% endfor %}
+    )
+
+    aci.get_existing()
+
+    if state == 'present':
+        aci.payload(
+            aci_class='{{class}}',
+            class_config={ {% for key, value in pkeys.items() %}
+                '{{value.payload}}': {{value.var}},{% endfor %}
+            },
+        )
+
+        aci.get_diff(aci_class='{{class}}')
+
+        aci.post_config()
+
+    elif state == 'absent':
+        aci.delete_config()
+
+    aci.exit_json()
+
+if __name__ == "__main__":
+    main()
