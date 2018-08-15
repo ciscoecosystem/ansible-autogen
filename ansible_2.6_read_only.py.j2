@@ -9,13 +9,14 @@ DOCUMENTATION = r'''
 module: {{filename[:-3]}}
 short_description: Manage {{label}} ({{name}})
 description:
-- {{descr}}
+- {{description}}
 notes:
 - More information about the internal APIC class B({{name}}) from
   L(the APIC Management Information Model reference,https://developer.cisco.com/docs/apic-mim-ref/).
 author:
 - Maxwell Lin-He (@maxyso)
 version_added: '2.7'
+options:
   state:
     choices: [ query ]
     default: query

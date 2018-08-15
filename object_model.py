@@ -3,7 +3,7 @@ import requests
 import json
 
 # Dictionary of Regex Patterns to pull properties from documentation html files:
-rp = {  'abstract': re.compile("Class (.*?) (\(\w+\))"),
+rp = {  'abstract': re.compile("Class (.*?) \((\w+)\)"),
         'cleanr': re.compile("<.*?>"),
         'configurable': re.compile("Configurable: (\w+)"),
         'container_section': re.compile("<strong>Container Mos:.*?<br />", re.DOTALL),
@@ -95,18 +95,15 @@ class MIM:
 
         class_dict = {}
         # initiaize class attributes
-        class_dict['label'] = rp['label'].search(html).group(1).strip()
-        class_dict['name'] = rp['abstract'].search(html).group(1)
-        class_dict['isAbstract'] = rp['abstract'].search(html).group(2) == 'ABSTRACT'
-        class_dict['isConfigurable'] = rp['configurable'].search(html).group(1) == 'true'
-        class_dict['isDeletable'] = True if rp['del'].search(html).group(1) == 'yes' else False
-        class_dict['help'] = rp['doc_descr'].search(html).group(1).strip()
+        class_dict['label'] = MIM._search_group(rp['label'], html, 1)
+        class_dict['name'] = MIM._search_group(rp['abstract'], html, 1)
+        print(MIM._search_group(rp['abstract'], html, 2))
+        class_dict['isAbstract'] = MIM._search_group(rp['abstract'], html, 2) == 'ABSTRACT'
+        class_dict['isConfigurable'] = MIM._search_group(rp['configurable'], html, 1) == 'true'
+        class_dict['isDeletable'] = True if MIM._search_group(rp['del'], html, 1) == 'yes' else False
+        class_dict['help'] = MIM._search_group(rp['doc_descr'], html, 1)
 
-        rn_text = rp['rn_format'].search(r.text)
-        if not rn_text:
-            rn_text = rn_text.group(1).strip()
-        else:
-            rn_text = ''
+        rn_text = MIM._search_group(rp['rn_format'], html, 1)
         rn_text = MIM._clean_html(rn_text)
         name_comp = rp['rn_component'].findall(rn_text)
         class_dict['identifiedBy'] = name_comp
@@ -208,11 +205,27 @@ class MIM:
         """removes html brackets"""
         return re.sub(rp['cleanr'], "", raw_html)
 
+    @staticmethod
+    def _search_group(regex, text, group):
+        """
+        returns string matching regex pattern and group # from text
+        returns empty string if no match
+        """
+        match = regex.search(text)
+        if match == None:
+            return ""
+        else:
+            return match.group(group).strip()
+
+
 
 class MO:
     def __init__(self, klass, meta):
         self.klass = klass
         self.meta = meta
+
+    def __eq__(self, other):
+        return self.klass == other.klass
 
     @property
     def properties(self):

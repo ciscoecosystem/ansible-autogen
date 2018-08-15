@@ -3,6 +3,7 @@
 import argparse
 import sys
 import logging
+import re
 from jinja2 import Environment, FileSystemLoader
 from object_model import MIM, ModuleGenerationException
 from keyword import iskeyword
@@ -53,16 +54,25 @@ def set_hierarchy(all_parameters, classes, mim, target):
         klass_mo = mim.get_class(klass)
         props = klass_mo.identifiedBy
         if len(props) == 0 and klass != target:
-            unnamed_rn += klass_mo.rnFormat
+            if klass != "polUni":
+                unnamed_rn += klass_mo.rnFormat + "/"
             continue
         rn_format = unnamed_rn + klass_mo.rnFormat
+        unnamed_rn = ""
+
+        delimiters = "(\{\[|\{).*?(\]\}|\})" #pattern to remove paramter names
+        replace = "\g<1>\g<2>"
+        flip_brackets = "(\{\[).*?(\]\})" #pattern to sub {[]} to [{}]
+
+        rn_format = re.sub(delimiters, replace, rn_format)
+        rn_format = re.sub(flip_brackets, "[{}]", rn_format)
 
         # get variable names
         label = klass_mo.label.lower().replace(" ", "_")
         args = []
         for prop in props:
             if klass != target:
-                details = {'comments': klass_mo.properties[prop]['label'], 'naming': True}
+                details = {'label': klass_mo.properties[prop]['label'], 'naming': True}
                 var = label if prop == "name" else "{0}_{1}".format(label, prop)
                 args.append(var)
                 details['var'] = var
@@ -158,22 +168,25 @@ def ansible_model(classes, meta):
     lines  = [] # lines for class list text file
 
     for klass, value in model.items():
-        context = get_ansible_context(mim, value)
-
-        lines.append("{} {}".format(klass, context['dn']))
-
         logger.info("Creating module for {0}".format(klass))
-        try:
-            out = "generated_{0}_module.py".format(klass)
-            context['filename'] = out
+        out = "generated_{0}_module.py".format(klass)
 
+        if value.isAbstract: # use abstract template
+            context = {'klass': klass, 'name': value.name, 'label': value.label, 'description': value.help, 'filename': out}
+            mod = render('ansible_2.6_read_only.py.j2', context)
             with open(out, 'w') as f:
-                mod = render('module.py.j2', context)
                 f.write(mod)
-            logger.info("Successfully created module for {0}".format(klass))
-
-        except ModuleGenerationException as e:
-            logger.error(e)
+        else:
+            context = get_ansible_context(mim, value)
+            context['filename'] = out
+            lines.append("{} {}".format(klass, context['dn']))
+            try:
+                with open(out, 'w') as f:
+                    mod = render('ansible_2.6_read_write.py.j2', context)
+                    f.write(mod)
+            except ModuleGenerationException as e:
+                logger.error(e)
+        logger.info("Successfully created module for {0}".format(klass))
 
     return lines
 
@@ -206,8 +219,8 @@ def main():
         meta = None
 
     classes = ansible_model(classes, meta)
-    with open("new.txt", 'w') as n:
-        n.write('\n'.join(classes))
+    # with open(args.list, 'w') as n:
+    #     n.write('\n'.join(classes))
 
 
 if __name__ == '__main__':
