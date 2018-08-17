@@ -1,0 +1,57 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
+DOCUMENTATION = r'''
+---
+module: {{filename[:-3]}}
+short_description: Manage {{label}} ({{name}})
+description:
+- {{description}}
+notes:
+- More information about the internal APIC class B({{name}}) from
+  L(the APIC Management Information Model reference,https://developer.cisco.com/docs/apic-mim-ref/).
+author:
+- Maxwell Lin-He (@maxyso)
+version_added: '2.7'
+options:
+  state:
+    choices: [ query ]
+    default: query
+    description:
+    - Use C(query) for listing all object that inherit from {{name}}.
+
+extends_documentation_fragment: aci
+'''
+
+from ansible.module_utils.network.aci.aci import ACIModule, aci_argument_spec
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    argument_spec = aci_argument_spec()
+    argument_spec.update(
+        state=dict(type='str', default='query', choices=['query']),
+    )
+
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        supports_check_mode=True,
+    )
+
+    aci = ACIModule(module)
+    aci.construct_url(
+        root_class={
+            'aci_class': '{{klass}}',
+            'aci_rn': "",
+            'filter_target': "",
+            'module_object': None
+        }
+    )
+
+    aci.get_existing()
+    aci.exit_json()
+
+if __name__ == "__main__":
+    main()
