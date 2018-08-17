@@ -72,7 +72,9 @@ def set_hierarchy(all_parameters, classes, mim, target):
         args = []
         for prop in props:
             if klass != target:
-                details = {'label': klass_mo.properties[prop]['label'], 'naming': True}
+                details = {'label': klass_mo.properties[prop]['label'],
+                            'naming': True,
+                            'help': klass_mo.properties[prop]['help']}
                 var = label if prop == "name" else "{0}_{1}".format(label, prop)
                 args.append(var)
                 details['var'] = var
@@ -106,6 +108,11 @@ def set_hierarchy(all_parameters, classes, mim, target):
                 i += 1
             filter_str += "eq({0}.{1}, \"{{}}\"))\'.format{2}".format(klass, props[i], arg_str)
 
+        if filter_str == "":
+            filter_str = "\'\'"
+        if len(args) == 0:
+            args = [None]
+
         hierarchy.append({'name': klass,
                         'args': args,
                         'rn': rn,
@@ -119,8 +126,10 @@ def get_ansible_context(mim, mo):
     all_parameters = {} # will add other class naming later
     for key, value in mo.properties.items():
         if value['isConfigurable']:
-            details = {'options': list(value['options'].keys()),
-                        'label': value['label'],
+            details = {'options': value['options'], #TODO: make sure options for is a list, not dict
+                        # 'options': list(value['options'].keys()),
+                        # 'label': value['label'],
+                        'help': value['help'],
                         'payload': key,
                         'var': '_' + key if iskeyword(key) else key}
             if key == 'name':
@@ -169,7 +178,8 @@ def ansible_model(classes, meta):
 
     for klass, value in model.items():
         logger.info("Creating module for {0}".format(klass))
-        out = "generated_{0}_module.py".format(klass)
+        # out = "generated_{0}_module.py".format(klass)
+        out = "auto_{}.py".format(klass)
 
         if value.isAbstract: # use abstract template
             context = {'klass': klass, 'name': value.name, 'label': value.label, 'description': value.help, 'filename': out}

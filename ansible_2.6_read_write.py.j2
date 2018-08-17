@@ -6,7 +6,7 @@ __metaclass__ = type
 
 DOCUMENTATION = r'''
 ---
-module: {{filename[:-3]}}
+module: {{filename[:-3]}} {# remove '.py' extention #}
 short_description: Manage {{doc.label}} ({{doc.name}})
 description:
 - {{doc.description}}
@@ -19,7 +19,7 @@ version_added: '2.7'
 options: {% for key, value in keys.items() %}
   {{key}}:
     description:
-    - {{value.label}} {% if value.aliases %}
+    - {{value.help}} {% if value.aliases %}
     aliases: [ {% for x in value.aliases %}{%if not loop.last %}{{x}}, {% endif %}{% endfor %}{{value.aliases[-1]}} ] {% endif %}{% if value.options %}
     choices: [ {% for x in value.options %}{%if not loop.last %}{{x}}, {% endif %}{% endfor %}{{value.options[-1]}} ] {% endif %}{% endfor %}
   state: {% if doc.deletable %}

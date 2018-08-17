@@ -42,8 +42,10 @@ def generateClassMeta(className):
     paciClassMeta['properties'] = {
         p.getName(): {
             'isConfigurable': p.isConfig(),
-            'label': p.getLabel(),
-            'options': p.getType().getLabelConstMap()
+            'help': p._getHelp(),
+            # 'options': p.getType().getLabelConstMap()
+            # use p.getType().getConstants() for both str label and internal value
+            'options': p.getType()._constMap.keys() if p.isConfig() else []
         }
         for p in classMeta.getProperties()
     }

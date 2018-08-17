@@ -62,16 +62,6 @@ def main():
     ''.join(stdout.readlines()).strip()
     # TODO (2015-09-14, Praveen Kumar): Check the exit status properly.
 
-    # Create ~/.aci-meta if it does not exist.
-    aci_meta_dir = '~/.aci-meta'
-    destination_dir = os.path.expanduser('{}'.format(aci_meta_dir))
-    try:
-        os.makedirs(destination_dir)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-
     destination = os.getcwd() + "/aci-meta.json"
     print('Copying generated meta from APIC to', destination)
     scp.get('aci-meta.json', destination)

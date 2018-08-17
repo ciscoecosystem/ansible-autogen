@@ -71,8 +71,8 @@ class MIM:
         def add_dn_helper(class_name, dn, class_list):
             """add lists of container hierarchy"""
             containers = self.meta[class_name]['containers']
-            if len(containers) > 100:
-                raise ModuleGenerationException()
+            if len(containers) > 100: # recursion breaks with classes with too many classes TODO: find solution
+                raise ModuleGenerationException("Too many containers")
             if 'topRoot' in containers:
                 dns.append((dn, class_list))
                 return
@@ -120,8 +120,9 @@ class MIM:
             details = {}
             details['isConfigurable'] = "admin" in property_doc_tags[i] or "naming" in property_doc_tags[i]
             options = MIM._get_property_details(cur, html)
-            details['options'] = {option: option for option in options}
-            details['label'] = self._get_property_comments(cur, html)
+            details['options'] = options
+            # details['options'] = {option: option for option in options} # old format, dict
+            details['help'] = self._get_property_comments(cur, html)
             properties[cur] = details
         class_dict['properties'] = properties
 
@@ -221,7 +222,7 @@ class MIM:
 
 class MO:
     def __init__(self, klass, meta):
-        self.klass = klass
+        self.klass = klass # class name with no colon between package
         self.meta = meta
 
     def __eq__(self, other):
@@ -236,7 +237,7 @@ class MO:
             keys are all property names for the class
             values are dicts with keys:
                 'isConfigurable': bool
-                'label': str
+                'help': str
                 'options': dict - key and values are strings of option names
         """
         return self.meta['properties']
