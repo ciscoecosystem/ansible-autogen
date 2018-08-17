@@ -176,7 +176,7 @@ def get_ansible_context(mim, mo):
             'dn': mo.dnFormat[choice][0]}
 
 
-def ansible_model(classes, meta):
+def gen_ansible_module(classes, meta):
     mim = MIM(meta)
     model = {klass: mim.get_class(klass) for klass in classes}
     lines  = [] # lines for class list text file
@@ -205,38 +205,3 @@ def ansible_model(classes, meta):
 
     return lines
 
-
-def main():
-    #TODO: add arguments for other documentation sources
-    parser = argparse.ArgumentParser(description='Create an Ansible Module for a specified ACI class')
-    parser.add_argument('-c', '--class', help='name of the class that the output module will manipulate', dest='klass')
-    parser.add_argument('-l', '--list', help='path of text file containing class names')
-    parser.add_argument('-m', '--meta', help='path to aci meta json file')
-
-    # verify args
-    args = parser.parse_args()
-    if not args.klass and not args.list:
-        parser.error("--class or --list required")
-    elif args.klass and args.list:
-        parser.error("only one of --class or --list required")
-
-    # get list of classes to generate modules for
-    if args.klass:
-        classes = [args.klass]
-    else:
-        with open(args.list, 'r') as l:
-            classes = list(map(lambda x: x.strip(), l.readlines()))
-
-    if args.meta:
-        with open(args.meta, 'r') as m:
-            meta = m.read()
-    else:
-        meta = None
-
-    classes = ansible_model(classes, meta)
-    # with open(args.list, 'w') as n:
-    #     n.write('\n'.join(classes))
-
-
-if __name__ == '__main__':
-    main()

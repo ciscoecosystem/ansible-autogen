@@ -9,8 +9,7 @@ import json
 from utils import render
 from object_model import MIM, ModuleGenerationException
 from ansible_generator import gen_ansible_module
-from terraform_generator import gen_go_service,gen_go_module, gen_terraform_resource
-
+from terraform_generator import *
 # ====================================================================================
 # Logging
 # ------------------------------------------------------------------------------------
@@ -44,35 +43,72 @@ class MyLogger(object):
 # ------------------------------------------------------------------------------------
 
 
+def main_from_ansible():
+    parser = argparse.ArgumentParser(description='Create an Ansible Module for a specified ACI class')
+    parser.add_argument('-m', '--meta', help='path to aci meta json file')
+
+   
+    # verify args
+    args = parser.parse_args()  
+
+    meta = None
+    classes = None
+
+    # get list of classes to generate modules for
+    if args.klass:
+        classes = [args.klass]
+    else:
+        with open(args.list, 'r') as l:
+            classes = list(map(lambda x: x.strip(), l.readlines()))
+
+    if args.meta:
+        with open(args.meta, 'r') as m:
+            meta = m.read()
+    else:
+        meta = None
+
+    classes = gen_ansible_module(classes, meta)
+
 def main():
-    #TODO: add arguments for other documentation sources
     parser = argparse.ArgumentParser(description='Utility to create Module for a specified ACI class')
-    parser.add_argument('class_name', help='name of the class that the output module will manipulate')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--ansible', action='store_true', help='generate code for ansible module')
     group.add_argument('--terraform', action='store_true', help='generate model and service code for terraform provider')
+    class_input_group = parser.add_mutually_exclusive_group(required=True)
+    class_input_group.add_argument('-c', '--class', help='name of the class that the output module will manipulate', dest='klass')
+    class_input_group.add_argument('-l', '--list', help='path of text file containing class names')
 
     args = parser.parse_args()
 
-    class_name = re.sub('[:-]', '', args.class_name)
-    logger.info("Creating module for {0}".format(class_name))
+    meta = None
+    classes = None
+
+    # get list of classes to generate modules for
+    if args.klass:
+        classes = [args.klass]
+    else:
+        with open(args.list, 'r') as l:
+            classes = list(map(lambda x: x.strip(), l.readlines()))
+
+    if args.meta:
+        with open(args.meta, 'r') as m:
+            meta = m.read()
+
     try:
-        doc = MO(class_name=class_name)
-        print(json.dumps(doc.terraform_get_context()))
+        # doc = MO(class_name=class_name)
+        # print(json.dumps(doc.terraform_get_context()))
         if args.ansible:
-            gen_ansible_module(doc)
+            classes = gen_ansible_module(classes, meta)
+
         elif args.terraform:
-            gen_go_service(doc)
-            gen_go_module(doc)
-            gen_terraform_resource(doc)
-
-
-            
-            
+            pass 
+            # gen_go_service(doc)
+            # gen_go_module(doc)
+            # gen_terraform_resource(doc)
     except ModuleGenerationException as e:
         logger.error(e)
 
-    logger.info("Successfully created module for {0}".format(class_name))
+    logger.info("Successfully created module for {0}".format(classes))
 
 if __name__ == '__main__':
     main()
