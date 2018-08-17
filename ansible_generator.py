@@ -8,20 +8,20 @@ from jinja2 import Environment, FileSystemLoader
 from object_model import MIM, ModuleGenerationException
 from keyword import iskeyword
 
-def gen_ansible_module(doc):
-    class_name = doc.target_class
-    generated_module = "generated_{class_name}_module.py".format(class_name=class_name)
-    context = doc.ansible_get_context()
-    extra_context = { 
-                'deletable': doc.attributes["deletable"],
-                'filename': generated_module
-            }
-    context.update(extra_context)
+# def gen_ansible_module(doc):
+#     class_name = doc.target_class
+#     generated_module = "generated_{class_name}_module.py".format(class_name=class_name)
+#     context = doc.ansible_get_context()
+#     extra_context = { 
+#                 'deletable': doc.attributes["deletable"],
+#                 'filename': generated_module
+#             }
+#     context.update(extra_context)
 
     
-    with open(generated_module, 'w') as f:
-        mod = render('templates/ansible_module.py.j2', context)
-        f.write(mod)
+#     with open(generated_module, 'w') as f:
+#         mod = render('templates/ansible_module.py.j2', context)
+#         f.write(mod)
 
 # Make a class we can use to capture stdout and sterr in the log
 class MyLogger(object):

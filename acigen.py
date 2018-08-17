@@ -7,9 +7,9 @@ import logging
 import re
 import json
 from utils import render
-from object_model import MO, ModuleGenerationException
+from object_model import MIM, ModuleGenerationException
 from ansible_generator import gen_ansible_module
-from terraform_generator import gen_go_service
+from terraform_generator import gen_go_service,gen_go_module, gen_terraform_resource
 
 # ====================================================================================
 # Logging
