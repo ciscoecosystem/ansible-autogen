@@ -4,50 +4,12 @@ import argparse
 import sys
 import logging
 import re
+import os.path as p
 from jinja2 import Environment, FileSystemLoader
 from object_model import MIM, ModuleGenerationException
 from keyword import iskeyword
+from utils import PREFIX, render
 
-# def gen_ansible_module(doc):
-#     class_name = doc.target_class
-#     generated_module = "generated_{class_name}_module.py".format(class_name=class_name)
-#     context = doc.ansible_get_context()
-#     extra_context = { 
-#                 'deletable': doc.attributes["deletable"],
-#                 'filename': generated_module
-#             }
-#     context.update(extra_context)
-
-    
-#     with open(generated_module, 'w') as f:
-#         mod = render('templates/ansible_module.py.j2', context)
-#         f.write(mod)
-
-# Make a class we can use to capture stdout and sterr in the log
-class MyLogger(object):
-        def __init__(self, logger, level):
-                """Needs a logger and a logger level."""
-                self.logger = logger
-                self.level = level
-
-        def write(self, message):
-                # Only log if there is a message (not just a new line)
-                if message.rstrip() != "":
-                        self.logger.log(self.level, message.rstrip())
-
-        def flush(self):
-            for handler in self.logger.handlers:
-                handler.flush()
-
-# Replace stdout with logging to file at INFO level
-# sys.stdout = MyLogger(logger, logging.INFO)
-# Replace stderr with logging to file at ERROR level
-# sys.stderr = MyLogger(logger, logging.ERROR)
-# ------------------------------------------------------------------------------------
-
-def render(template_name, context):
-    env = Environment(loader=FileSystemLoader('.'))
-    return env.get_template(template_name).render(context)
 
 
 def set_hierarchy(all_parameters, classes, mim, target):
@@ -77,6 +39,7 @@ def set_hierarchy(all_parameters, classes, mim, target):
         args = []
         for prop in props:
             if klass != target:
+                print(klass_mo.properties[prop])
                 details = {'label': klass_mo.properties[prop]['label'],
                             'naming': True,
                             'help': klass_mo.properties[prop]['help']}
@@ -182,13 +145,13 @@ def gen_ansible_module(classes, meta):
     lines  = [] # lines for class list text file
 
     for klass, value in model.items():
-        logger.info("Creating module for {0}".format(klass))
+        print("Creating module for {0}".format(klass))
         # out = "generated_{0}_module.py".format(klass)
         out = "auto_{}.py".format(klass)
 
         if value.isAbstract: # use abstract template
             context = {'klass': klass, 'name': value.name, 'label': value.label, 'description': value.help, 'filename': out}
-            mod = render('ansible_2.6_read_only.py.j2', context)
+            mod = render(p.join(PREFIX,'ansible_2.6_read_only.py.j2'), context)
             with open(out, 'w') as f:
                 f.write(mod)
         else:
@@ -197,11 +160,10 @@ def gen_ansible_module(classes, meta):
             lines.append("{} {}".format(klass, context['dn']))
             try:
                 with open(out, 'w') as f:
-                    mod = render('ansible_2.6_read_write.py.j2', context)
+                    mod = render(p.join(PREFIX,'ansible_2.6_read_write.py.j2'), context)
                     f.write(mod)
             except ModuleGenerationException as e:
-                logger.error(e)
-        logger.info("Successfully created module for {0}".format(klass))
+                print(e, file=sys.stderr)
+        print("Successfully created module for {0}".format(klass))
 
     return lines
-

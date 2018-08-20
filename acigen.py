@@ -38,39 +38,14 @@ class MyLogger(object):
 
 # Replace stdout with logging to file at INFO level
 # sys.stdout = MyLogger(logger, logging.INFO)
-# Replace stderr with logging to file at ERROR level
+# # Replace stderr with logging to file at ERROR level
 # sys.stderr = MyLogger(logger, logging.ERROR)
-# ------------------------------------------------------------------------------------
+# # ------------------------------------------------------------------------------------
 
-
-def main_from_ansible():
-    parser = argparse.ArgumentParser(description='Create an Ansible Module for a specified ACI class')
-    parser.add_argument('-m', '--meta', help='path to aci meta json file')
-
-   
-    # verify args
-    args = parser.parse_args()  
-
-    meta = None
-    classes = None
-
-    # get list of classes to generate modules for
-    if args.klass:
-        classes = [args.klass]
-    else:
-        with open(args.list, 'r') as l:
-            classes = list(map(lambda x: x.strip(), l.readlines()))
-
-    if args.meta:
-        with open(args.meta, 'r') as m:
-            meta = m.read()
-    else:
-        meta = None
-
-    classes = gen_ansible_module(classes, meta)
 
 def main():
     parser = argparse.ArgumentParser(description='Utility to create Module for a specified ACI class')
+    parser.add_argument("-m","--meta", help="Location of the meta json file")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--ansible', action='store_true', help='generate code for ansible module')
     group.add_argument('--terraform', action='store_true', help='generate model and service code for terraform provider')
@@ -102,7 +77,7 @@ def main():
 
         elif args.terraform:
             pass 
-            # gen_go_service(doc)
+            gen_go_service(classes, meta)
             # gen_go_module(doc)
             # gen_terraform_resource(doc)
     except ModuleGenerationException as e:

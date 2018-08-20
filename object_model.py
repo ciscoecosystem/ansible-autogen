@@ -25,7 +25,6 @@ rp = {  'abstract': re.compile("Class (.*?) \((\w+)\)"),
         }
 
 # keys that are to be ignored in the 
-ignore_set = set(["descr","lcOwn","name","ownerKey", "ownerTag", "pcTag", "uid"])
 
 class MIM:
     """
