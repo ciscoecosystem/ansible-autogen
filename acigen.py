@@ -45,7 +45,7 @@ class MyLogger(object):
 
 def main():
     parser = argparse.ArgumentParser(description='Utility to create Module for a specified ACI class')
-    parser.add_argument("-m","--meta", help="Location of the meta json file")
+    parser.add_argument("-m","--meta", help="Location of the meta json file", required=True)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--ansible', action='store_true', help='generate code for ansible module')
     group.add_argument('--terraform', action='store_true', help='generate model and service code for terraform provider')

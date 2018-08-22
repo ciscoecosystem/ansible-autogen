@@ -16,7 +16,7 @@ func (sm *ServiceManager) Create{{doc.slug_label}}(name string, description stri
 
 }
 
-func (sm *ServiceManager) Read{{doc.slug_label}}(name {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) (*models.{{doc.slug_label}}, error) {
+func (sm *ServiceManager) Read{{doc.slug_label}}(name string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) (*models.{{doc.slug_label}}, error) {
 	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}){% endfor  %}, models.{{class|capitalize}}(name))
 	
     cont, err := sm.Get(dn)
@@ -28,7 +28,7 @@ func (sm *ServiceManager) Read{{doc.slug_label}}(name {% for object in hierarchy
 	return {{class}}, nil
 }
 
-func (sm *ServiceManager) Delete{{doc.slug_label}}(name {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) error {
+func (sm *ServiceManager) Delete{{doc.slug_label}}(name string{% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) error {
 	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}){% endfor  %},models.{{class|capitalize}}(name))
 
 	return sm.DeleteByDn(dn, models.{{class|capitalize}}ClassName)

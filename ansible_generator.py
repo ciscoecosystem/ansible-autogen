@@ -39,8 +39,8 @@ def set_hierarchy(all_parameters, classes, mim, target):
         args = []
         for prop in props:
             if klass != target:
-                print(klass_mo.properties[prop])
-                details = {'label': klass_mo.properties[prop]['label'],
+                # import pdb; pdb.set_trace()
+                details = { 'options': klass_mo.properties[prop]['options'],
                             'naming': True,
                             'help': klass_mo.properties[prop]['help']}
                 var = label if prop == "name" else "{0}_{1}".format(label, prop)
@@ -131,12 +131,14 @@ def get_ansible_context(mim, mo):
         if "payload" in value:
             payload_parameters[key] = value
 
-    return {'class': mo.klass,
+    context = {'class': mo.klass,
             'keys': all_parameters,
             'pkeys': payload_parameters,
             'hierarchy': hierarchy,
             'doc': attributes,
             'dn': mo.dnFormat[choice][0]}
+    # print(context)
+    return context
 
 
 def gen_ansible_module(classes, meta):
