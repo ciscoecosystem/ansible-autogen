@@ -1,0 +1,92 @@
+{% macro tabs(number=1) %}{%for i in range(0,number)%}	{%endfor%}{% endmacro -%}
+var Cisco_{{label}} = Class.create();
+Cisco_{{label}}.prototype = {	
+	initialize : function(APICip , APICusername , APICpassword , protocol , auth, SNOWurl, SNOWusername , SNOWpassword {% for c in parent_classes %}, {{labels[c]}}Name{% endfor %}) {
+		this.APICip = APICip ;
+		this.APICusername = APICusername ;
+		this.APICpassword = APICpassword ;
+		this.protocol = protocol ;
+		this.SNOWusername = SNOWusername ;
+		this.SNOWpassword = SNOWpassword ;
+		this.SNOWurl =  SNOWurl;
+		this.auth = auth;
+		{% for c in parent_classes -%}
+		this.{{c}}Name = {{labels[c]}}Name;
+		{% endfor -%}
+		this.logger = new CiscoLogUtil() ;
+    },
+	
+	{{label}}Configuration : function(login_domain) {
+		var loginObj = new CiscoACILogin(this.APICip , this.APICusername , this.APICpassword , this.protocol );
+		var token ;
+		if(this.auth == 'Remote'){
+			token = loginObj.r_login(login_domain);
+		}	 else {
+			token = loginObj.login();
+		}
+		//Get the {{label}} Configuration.
+		var {{label}}Url = this.protocol + "://" + this.APICip + "/api/class/{{class}}.json?query-target=children&target-subtree-class={{class}}";
+		var HTTPobj = new CiscoHTTPClient(this.APICip , this.APICusername , this.APICpassword) ;
+		var {{label}}Result = HTTPobj.APIC_HTTP_GET({{label}}Url , token, "", this.auth, login_domain) ;
+		
+		//Parse the result and create the SNOW POST data
+		var {{label}}Count = {{label}}Result.totalCount ;
+		var dataSet_{{label}} = {} ;
+		dataSet_{{label}}.records = [] ;
+		if ({{label}}Count == 0){
+			this.logger._debug("{{label}} Count is zero or User doesn't have right permissions");
+			return;
+		}
+		for (var j = 0 ; j < {{label}}Count ; j++){
+			var {{label}}Name =  {{label}}Result.imdata[j].{{label}}.attributes.name;
+			{%- for p in properties %}{% if p not in parent_classes and p != "name" %}{# properties excluding name and parent classes#}
+			var {{p}} = {{label}}Result.imdata[j].{{label}}.attributes.{{p}};
+			{%- endif %}{% endfor %}{# properties excluding name and parent classes#}
+			var data_{{label}} = {} ;
+			data_{{label}}.name = this.APICip + "_" + {% for class_name in parent_classes %}{{class_name}}Name + "||" + {% endfor %}{{label}}Name ;
+			{%- for i in range(1, parent_classes|length + 1) %}{# parent classes#}
+			data_{{label}}.{{parent_classes[i - 1]}}Name = this.APICip {% for j in range(i)%}+ "_" + this.{{parent_classes[j]}}Name{% endfor %} ;
+			{%- endfor %}{# parent classes#}
+			{%- for p in properties %}{% if p not in parent_classes and p != "name" %}{# properties excluding name and parent classes#}
+			data_{{label}}.{{p}} = {{p}};
+			{%- endif %}{% endfor %}{# properties excluding name and parent classes#}
+			var {{label}}SNOWpost = new JSON().encodeObject(data_{{label}});
+			//THE {{label}}tablename MAY NEED TO BE CORRECTED
+			var {{label}}_tablename = "x_caci_cisco_aci_i_cisco_{% for class_name in parent_classes %}{{class_name}}_{% endfor %}{{label}}_stages" ;
+			var {{label}}SNOWResult = HTTPobj.SNOW_HTTP_TABLE_POST(this.SNOWurl ,{{label}}_tablename, {{label}}SNOWpost , this.SNOWusername , this.SNOWpassword , "443") ;
+			{% for path in range(hierarchy|length) %}{% for c in hierarchy[path] %}
+			var {{c}}Url = this.protocol + "://" + this.APICip + "/api/class/{{c}}.json?query-target=children&target-subtree-class={{c}}";
+		    var {{c}}result = HTTPobj.APIC_HTTP_GET({{c}}Url , token, "", this.auth, login_domain) ;
+		    var {{c}}Count = {{c}}result.totalCount ;
+		    for (var k = 0; k < {{c}}Count; k++){
+			    var {{c}}Name =  FilterEntryresult.imdata[k].vzEntry.attributes.name;
+			  	{%if loop.first %}data{{c}} = data{{label}} + "||" + {{c}}Name;
+			   	{%- else %}data{{c}} = data{{hierarchy[path][loop.index0 - 1]}} + "||" + {{c}}Name;{%endif%}
+			   	{% if loop.last %}data_{{hierarchy[path][-1]}}.discovery_source = "Cisco ACI Application";{% endif %}
+		    	{%- for p in contained_props[c] %}{%- if p != "name" %}{# properties excluding name #}
+				var {{p}} = {{label}}Result.imdata[j].{{label}}.attributes.{{p}};
+				{%- endif %}{% endfor %}{# properties excluding name #}
+				var {{label}}SNOWpost = new JSON().encodeObject(data_{{label}});
+				//THE tablename MAY NEED TO BE CORRECTED
+				var {{c}}_tablename = "x_caci_cisco_aci_i_cisco{%-for c in hierarchy[path] -%}_{{labels[c]}}{%-endfor-%}_stages" ;
+				var {{c}}SNOWResult = HTTPobj.SNOW_HTTP_TABLE_POST(this.SNOWurl ,{{c}}_tablename, {{c}}SNOWpost , this.SNOWusername , this.SNOWpassword , "443");
+			{%endfor-%}{# c in path #}
+			{% for i in range(1, hierarchy[path]|length) %}
+			}{%endfor%}
+		}{%endfor%}{# path in hierarchy #}
+	},
+
+	buildRelation : function(login_domain) {
+		
+		var ciscoCIRelationshipObj = new CiscoCIRelationship(this.APICip , this.APICusername , this.APICpassword , this.protocol , this.SNOWurl,this.SNOWusername , this.SNOWpassword );
+		{%for path in hierarchy-%}
+		{%for i in range(1, path|length)-%}
+		//relationship between {{labels[path[i - 1]]}} and {{labels[path[i]]}}
+		//THE name MAY NEED TO BE CORRECTED
+		ciscoCIRelationshipObj.buildRelationship("x_caci_cisco_aci_i_cisco_{{labels[path[i - 1]]}}_{{labels[path[i]]}}","{{labels[path[i - 1]]}}_name","name","Contains","x_caci_cisco_aci_i_cisco_{{labels[path[i - 1]]}}_{{labels[path[i - 1]]}}_relationship");
+		{%endfor%}
+		{%endfor%}
+	},
+	
+    type: "Cisco_{{label}}"
+};
