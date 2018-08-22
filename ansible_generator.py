@@ -12,7 +12,7 @@ from utils import PREFIX, render
 
 
 
-def set_hierarchy(all_parameters, classes, mim, target):
+def set_hierarchy(all_parameters, classes, mim, target, post_op=None):
     """add parent class naming to ansible parameters and return hierarchy dict"""
     hierarchy = []
     unnamed_rn = ""
@@ -33,6 +33,10 @@ def set_hierarchy(all_parameters, classes, mim, target):
 
         rn_format = re.sub(delimiters, replace, rn_format)
         rn_format = re.sub(flip_brackets, "[{}]", rn_format)
+
+        # extra operation if needed
+        if post_op:
+            rn_format = post_op(rn_format)
 
         # get variable names
         label = klass_mo.label.lower().replace(" ", "_")
@@ -86,10 +90,15 @@ def set_hierarchy(all_parameters, classes, mim, target):
                         'rn': rn,
                         'filter': filter_str
                         })
+
+    print(hierarchy)
     return hierarchy
 
-
 def get_ansible_context(mim, mo):
+    return get_context(mim, mo, "ansible")
+
+
+def get_context(mim, mo, kind):
 
     all_parameters = {} # will add other class naming later
     for key, value in mo.properties.items():
@@ -124,7 +133,14 @@ def get_ansible_context(mim, mo):
         choice = 0
 
     classes = mo.dnFormat[choice][1]
-    hierarchy = set_hierarchy(all_parameters, classes, mim, mo.klass)
+
+    hierarchy = None
+    if kind == "terraform":
+        # for golang replacement
+        replace_brases = lambda rn: re.sub("{}","%s", rn)
+        hierarchy = set_hierarchy(all_parameters, classes, mim, mo.klass, post_op=replace_brases)
+    else:
+        hierarchy = set_hierarchy(all_parameters, classes, mim, mo.klass)
 
     payload_parameters = {} #target class properties only #TODO just copy all parameters first
     for key, value in all_parameters.items():
