@@ -9,17 +9,32 @@ import (
 	"bitbucket.org/crestdatasys/aci-go-client/models"
 )
 
-func (sm *ServiceManager) Create{{doc.slug_label}}(name string, description string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor %}, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
-	{{class}} := models.New{{doc.slug_label}}(name, description{% for object in hierarchy[:-1] %}, {{object.name}}{% endfor  %}, {{class}}attr)
+{% set args_list_with_type_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset %}
+{% set args_list_with_type -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset %}
+{% set args_list_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset %}
+{% set args_list -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset %}
+{% set dn -%}
+fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+{%- endset %}
+
+func (sm *ServiceManager) Create{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
+	{{class}} := models.New{{doc.slug_label}}({{ args_list_reverse }}, description, {{class}}attr)
 	err := sm.Save({{class}})
 	return {{class}}, err
 
 }
 
-func (sm *ServiceManager) Read{{doc.slug_label}}(name string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) (*models.{{doc.slug_label}}, error) {
-	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}){% endfor  %}, models.{{class|capitalize}}(name))
-	
-    cont, err := sm.Get(dn)
+func (sm *ServiceManager) Read{{doc.slug_label}}({{args_list_with_type_reverse}}) (*models.{{doc.slug_label}}, error) {
+	dn := {{ dn }}    
+	cont, err := sm.Get(dn)
 	if err != nil {
 		return nil, err
 	}
@@ -29,23 +44,22 @@ func (sm *ServiceManager) Read{{doc.slug_label}}(name string {% for object in hi
 }
 
 func (sm *ServiceManager) Delete{{doc.slug_label}}(name string{% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) error {
-	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}){% endfor  %},models.{{class|capitalize}}(name))
-
+	dn := {{ dn }}
 	return sm.DeleteByDn(dn, models.{{class|capitalize}}ClassName)
 }
 
-func (sm *ServiceManager) Update{{doc.slug_label}}(name, description string {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
-	{{class}} := models.New{{doc.slug_label}}(name, description {% for object in hierarchy[:-1] %}, {{object.name}} {% endfor  %}, {{class}}attr)	
+func (sm *ServiceManager) Update{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
+	{{class}} := models.New{{doc.slug_label}}({{ args_list_reverse }}, description, {{class}}attr)	
     {{class}}.Status = "modified"
 	err := sm.Save({{class}})
 	return {{class}}, err
 
 }
 
-func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1] %}{{object.name}} string {%if loop.index != hierarchy[:-1]|length %},{% endif %}{% endfor  %}) ([]*models.{{doc.slug_label}}, error) {
+func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %}) ([]*models.{{doc.slug_label}}, error) {
 
 	baseurlStr := "/api/node/class"	
-	dn := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s.json", baseurlStr {% for object in hierarchy[:-1] %}, models.{{object.name|capitalize}}({{object.name}}) {% endfor  %}, models.{{class|capitalize}}ClassName)
+	dn := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}/{{class}}.json", baseurlStr , {% for object in hierarchy[:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %})
     
     cont, err := sm.GetViaURL(urlStr)
 	list := models.{{doc.slug_label}}ListFromContainer(cont)

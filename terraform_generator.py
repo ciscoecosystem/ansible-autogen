@@ -98,9 +98,9 @@ def gen_terraform_resource(classes, meta):
     lines  = [] # lines for class list text file
 
     for klass, value in model.items():
-        print("Creating module for {0}".format(klass))
+        print("Creating resource for {0}".format(klass))
         # out = "generated_{0}_module.py".format(klass)
-        out = "{}.go".format(snakify(klass))
+        out = "resource_aci_{}.go".format(snakify(klass))
 
         # if value.isAbstract: # use abstract template
         #     context = {'klass': klass, 'name': value.name, 'label': value.label, 'description': value.help, 'filename': out}
@@ -113,10 +113,10 @@ def gen_terraform_resource(classes, meta):
         lines.append("{} {}".format(klass, context['dn']))
         try:
             with open(out, 'w') as f:
-                mod = render(p.join(PREFIX,'go_module.go.j2'), context)
+                mod = render(p.join(PREFIX,'resource.go.j2'), context)
                 f.write(mod)
         except ModuleGenerationException as e:
             print(e,file=sys.stderr)
-        print("Successfully created module for {0}".format(klass))
+        print("Successfully created resource for {0}".format(klass))
 
     return lines

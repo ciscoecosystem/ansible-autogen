@@ -7,45 +7,54 @@ import (
 	"bitbucket.org/crestdatasys/aci-go-client/container"
 )
 
+{%- set args_list_with_type_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{% set args_list_with_type -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set args_list_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set args_list -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set dn -%}
+fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+{%- endset -%}
+{%- set rn -%}
+"{{hierarchy[-1]['rn']}}"
+{%- endset %}
+
 const {{class|capitalize}}ClassName = "{{class}}"
 
 type {{doc.slug_label}} struct {
 	BaseAttributes
-    {%if pkeys|length != 0 %}
+    {%if pkeys|length != 0 -%}
 	{{doc.slug_label}}Attributes
-    {%endif %} 
-}
-
-func {{class|capitalize}}({{class}}Name string) string {
-	return fmt.Sprintf("{{doc.prefix}}-%s", {{class}}Name)
+    {%-endif %} 
 }
   {%if pkeys|length != 0 %}
 type {{doc.slug_label}}Attributes struct {
-
-    {% for key in pkeys.keys() %}
+    {% for key in pkeys.keys() -%}
 	{{key|capital}}       string
-    {% endfor
+    {% endfor %}
 }
   {%endif %} 
 
-func {{class|capitalize}}(name string) string {
-    return fmt.Sprintf("{{rn}}",name)
-}
-
-func New{{doc.slug_label}}(name, description, {% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}), {{class}}attr {{doc.slug_label}}Attributes) *{{doc.slug_label}} {
-	dn := fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/%s{% endfor %}/%s" {% for object in hierarchy[:-1] %}, {{object.name|capitalize}}({{object.name}}){% endfor  %}, {{class|capitalize}}(name))
-	
-    return &{{doc.slug_label}}{
+func New{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr {{doc.slug_label}}Attributes) *{{doc.slug_label}} {
+	dn := {{dn}}    
+	return &{{doc.slug_label}}{
 		BaseAttributes: BaseAttributes{
 			DistinguishedName: dn,
 			Description:       description,
 			Status:            "created, modified",
 			ClassName:         {{class|capitalize}}ClassName,
-			Rn:                {{class|capitalize}}(name),
+			Rn:                {{ rn }},
 		},
         {%if pkeys|length != 0 %}
-		{{doc.slug_label}}Attributes: {{class}attr,
-        {%endif %} 
+		{{doc.slug_label}}Attributes: {{class}}attr,
+        {% endif %} 
 	}
 }
 
@@ -55,7 +64,7 @@ func ({{class}} *{{doc.slug_label}}) ToMap() (map[string]string, error) {
 		return nil, err
 	}
 
-    {% for key in pkeys.keys() %}
+    {% for key in pkeys.keys() -%}
 	A({{class}}Map, "{{key}}",{{class}}.{{key|capital}})
     {% endfor %}
 	
@@ -76,7 +85,7 @@ func {{doc.slug_label}}FromContainerList(cont *container.Container, index int) *
 		},
         {%if pkeys|length != 0 %}
 		{{doc.slug_label}}Attributes{
-        {% for key in pkeys.keys() %}
+        {% for key in pkeys.keys() -%}
 	        {{key|capital}} : G({{doc.slug_label}}Cont, "{{key}}"),
         {% endfor %}		
         },
@@ -88,3 +97,4 @@ func {{doc.slug_label}}FromContainer(cont *container.Container) *{{doc.slug_labe
 
 	return {{doc.slug_label}}FromContainerList(cont, 0)
 }
+

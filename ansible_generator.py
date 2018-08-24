@@ -12,7 +12,7 @@ from utils import PREFIX, render
 
 
 
-def set_hierarchy(all_parameters, classes, mim, target, post_op=None):
+def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
     """add parent class naming to ansible parameters and return hierarchy dict"""
     hierarchy = []
     unnamed_rn = ""
@@ -35,8 +35,9 @@ def set_hierarchy(all_parameters, classes, mim, target, post_op=None):
         rn_format = re.sub(flip_brackets, "[{}]", rn_format)
 
         # extra operation if needed
-        if post_op:
-            rn_format = post_op(rn_format)
+        if kind == "terraform":
+            replace_brases = lambda rn: re.sub("{}","%s", rn)
+            rn_format = replace_brases(rn_format)
 
         # get variable names
         label = klass_mo.label.lower().replace(" ", "_")
@@ -54,43 +55,50 @@ def set_hierarchy(all_parameters, classes, mim, target, post_op=None):
             else:
                 all_parameters[prop]['naming'] = True
                 args.append(all_parameters[prop]['var'])
-
+        
+        if kind == "terraform":
+            if len(args) == 0:
+                args = [None]
+            hierarchy.append({'name': klass,
+                            'args': args,
+                            'rn': rn_format
+                            })
+        else:
         # contruct rn format string
-        if len(args) != 0:
-            arg_str = "("
-            i = 0
-            while i < len(args) - 1:
-                arg_str += args[i] + ", "
-                i += 1
-            arg_str += args[-1] + ")"
-        else:
-            arg_str = "()"
-        rn =  "\'{0}\'.format{1}".format(rn_format, arg_str)
+            if len(args) != 0:
+                arg_str = "("
+                i = 0
+                while i < len(args) - 1:
+                    arg_str += args[i] + ", "
+                    i += 1
+                arg_str += args[-1] + ")"
+            else:
+                arg_str = "()"
+            rn =  "\'{0}\'.format{1}".format(rn_format, arg_str)
 
-        #contruct filter string
-        if len(args) == 0:
-            filter_str = ""
-        elif len(args) == 1:
-            filter_str = "\'eq({0}.{1}, \"{{}}\")\'.format({2})".format(klass, props[0], args[0])
-        else:
-            filter_str = "\'and("
-            i = 0
-            while i < len(args) - 1:
-                filter_str += "eq({0}.{1}, \"{{}}\"),".format(klass, props[i])
-                i += 1
-            filter_str += "eq({0}.{1}, \"{{}}\"))\'.format{2}".format(klass, props[i], arg_str)
+            #contruct filter string
+            if len(args) == 0:
+                filter_str = ""
+            elif len(args) == 1:
+                filter_str = "\'eq({0}.{1}, \"{{}}\")\'.format({2})".format(klass, props[0], args[0])
+            else:
+                filter_str = "\'and("
+                i = 0
+                while i < len(args) - 1:
+                    filter_str += "eq({0}.{1}, \"{{}}\"),".format(klass, props[i])
+                    i += 1
+                filter_str += "eq({0}.{1}, \"{{}}\"))\'.format{2}".format(klass, props[i], arg_str)
 
-        if filter_str == "":
-            filter_str = "\'\'"
-        if len(args) == 0:
-            args = [None]
+            if filter_str == "":
+                filter_str = "\'\'"
+            if len(args) == 0:
+                args = [None]
 
-        hierarchy.append({'name': klass,
-                        'args': args,
-                        'rn': rn,
-                        'filter': filter_str
-                        })
-
+            hierarchy.append({'name': klass,
+                            'args': args,
+                            'rn': rn,
+                            'filter': filter_str
+                            })
     print(hierarchy)
     return hierarchy
 
@@ -135,12 +143,7 @@ def get_context(mim, mo, kind):
     classes = mo.dnFormat[choice][1]
 
     hierarchy = None
-    if kind == "terraform":
-        # for golang replacement
-        replace_brases = lambda rn: re.sub("{}","%s", rn)
-        hierarchy = set_hierarchy(all_parameters, classes, mim, mo.klass, post_op=replace_brases)
-    else:
-        hierarchy = set_hierarchy(all_parameters, classes, mim, mo.klass)
+    hierarchy = set_hierarchy(all_parameters, classes, mim, mo.klass, kind=kind)
 
     payload_parameters = {} #target class properties only #TODO just copy all parameters first
     for key, value in all_parameters.items():
