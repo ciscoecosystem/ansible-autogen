@@ -79,7 +79,7 @@ def main():
             pass 
             gen_go_service(classes, meta)
             gen_go_module(classes, meta)
-            # gen_terraform_resource(doc)
+            gen_terraform_resource(classes, meta)
     except ModuleGenerationException as e:
         logger.error(e)
 

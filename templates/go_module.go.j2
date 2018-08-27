@@ -23,7 +23,7 @@ import (
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset -%}
 {%- set rn -%}
-"{{hierarchy[-1]['rn']}}"
+fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
 {%- endset %}
 
 const {{class|capitalize}}ClassName = "{{class}}"
@@ -37,20 +37,20 @@ type {{doc.slug_label}} struct {
   {%if pkeys|length != 0 %}
 type {{doc.slug_label}}Attributes struct {
     {% for key in pkeys.keys() -%}
-	{{key|capital}}       string
+	{{key|capital}}       string `json:",omitempty"`
     {% endfor %}
 }
   {%endif %} 
 
-func New{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr {{doc.slug_label}}Attributes) *{{doc.slug_label}} {
-	dn := {{dn}}    
+func New{{doc.slug_label}}({{class}}Rn, parentDn, description string, {{class}}attr {{doc.slug_label}}Attributes) *{{doc.slug_label}} {
+	dn := fmt.Sprintf("%s/%s", parentDn, {{class}}Rn)  
 	return &{{doc.slug_label}}{
 		BaseAttributes: BaseAttributes{
 			DistinguishedName: dn,
 			Description:       description,
 			Status:            "created, modified",
 			ClassName:         {{class|capitalize}}ClassName,
-			Rn:                {{ rn }},
+			Rn:                {{class}}Rn,
 		},
         {%if pkeys|length != 0 %}
 		{{doc.slug_label}}Attributes: {{class}}attr,
@@ -72,7 +72,7 @@ func ({{class}} *{{doc.slug_label}}) ToMap() (map[string]string, error) {
 	return {{class}}Map, err
 }
 
-func {{doc.slug_label}}FromContainerList(cont *container.Container, index int) *BridgeDomain {
+func {{doc.slug_label}}FromContainerList(cont *container.Container, index int) *{{doc.slug_label}} {
 
 	{{doc.slug_label}}Cont := cont.S("imdata").Index(index).S({{class|capitalize}}ClassName, "attributes")
 	return &{{doc.slug_label}}{
@@ -98,3 +98,15 @@ func {{doc.slug_label}}FromContainer(cont *container.Container) *{{doc.slug_labe
 	return {{doc.slug_label}}FromContainerList(cont, 0)
 }
 
+func {{doc.slug_label}}ListFromContainer(cont *container.Container) []*{{doc.slug_label}} {
+	length, _ := strconv.Atoi(G(cont, "totalCount"))
+
+	arr := make([]*{{doc.slug_label}}, length)
+
+	for i := 0; i < length; i++ {
+
+		arr[i] = {{doc.slug_label}}FromContainerList(cont, i)
+	}
+
+	return arr
+}

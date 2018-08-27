@@ -9,6 +9,28 @@ import (
 	"github.com/hashicorp/terraform/helper/validation"
 )
 
+{%- set args_list_with_type_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{% set args_list_with_type -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set args_list_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set args_list -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set dn -%}
+fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+{%- endset -%}
+{%- set rn -%}
+fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+{%- endset %}
+{%- set name -%}
+fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+{%- endset %}
+
 func resourceAci{{doc.slug_label}}() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceAci{{doc.slug_label}}Create,
@@ -23,19 +45,27 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 		SchemaVersion: 1,
 
 		Schema: AppendBaseAttrSchema(map[string]*schema.Schema{
-			"{{doc.parent}}_dn": &schema.Schema{
+			{% if hierarchy| length > 1 -%}
+			"{{hierarchy[-2]["name"]|snakify}}_dn": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			{% endif -%}
+			{% for arg in hierarchy[-1]['args']%}
+			"{{arg}}": &schema.Schema{
+				Type: schema.TypeString,
+				Required: true,
+			},
+			{% endfor %}
             {%for key, prop in pkeys.items() %}
 			"{{key|snakify}}": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
                 {% if prop["options"]| length != 0 %}
 				ValidateFunc: validation.StringInSlice([]string{
-				{%for option in prop["options"] %}
+				{%for option in prop["options"] -%}
                  	"{{option}}",
-                {% endfor %}
+                {% endfor -%}
 				}, false),
                 {% endif %}
 			},
@@ -45,8 +75,7 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 }
 
 func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{doc.slug_label}}, error) {
-	{{class}}, err := client.Read{{doc.slug_label}}(models.GetMOName(dn), models.GetMOName(GetParentDn(dn)))
-
+	{{class}}, err := client.Get(dn)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +89,13 @@ func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{do
 
 func set{{doc.slug_label}}Attributes({{class}} *models.{{doc.slug_label}}, d *schema.ResourceData) *schema.ResourceData {
 	d.SetId({{class}}.DistinguishedName)
-	d.Set("name", GetMOName(bd.DistinguishedName))
-	d.Set("description", bd.Description)
-	d.Set("tenant_dn", GetParentDn(bd.DistinguishedName))
+	d.Set("description", {{class}}.Description)
+	{%- if hierarchy| length > 1 %}
+	d.Set("{{hierarchy[-2]["name"]|snakify}}_dn", GetParentDn({{class}}.DistinguishedName))
+	{%- endif %}
     {% for key in pkeys.keys() %} 
 	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
-    {% endfor %}
+    {%- endfor %}
 	return d
 }
 
@@ -75,35 +105,42 @@ func resourceAci{{doc.slug_label}}Import(d *schema.ResourceData, m interface{}) 
 
 	dn := d.Id()
 
-	bd, err := getRemote{{doc.slug_label}}(aciClient, dn)
+	{{class}}, err := getRemote{{doc.slug_label}}(aciClient, dn)
 
 	if err != nil {
 		return nil, err
 	}
-	schemaFilled := set{{doc.slug_label}}Attributes(bd, d)
+	schemaFilled := set{{doc.slug_label}}Attributes({{class}}, d)
 	return []*schema.ResourceData{schemaFilled}, nil
 }
 
 func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) error {
-
 	aciClient := m.(*client.Client)
-	name := d.Get("name").(string)
 	desc := d.Get("description").(string)
-	tenantDn := d.Get("tenant_dn").(string)
+	{%- for arg in hierarchy[-1]['args']%}
+	{{arg}} := d.Get("{{arg}}").(string)
+	{%- endfor %}
+	{%- if hierarchy|length > 1 %}
+	{{hierarchy[-2]["name"]}}Dn := d.Get("{{hierarchy[-2]["name"]|snakify}}_dn").(string)
+	{% endif %}
 	{{class}}Attr := models.{{doc.slug_label}}Attributes{}
 
-    {% for key in pkeys.keys() %} 
-
-	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
-    
+    {%- for key in pkeys.keys() %} 
     if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
         {{class}}Attr = {{key}}.(string)
     }
-    {% endfor %}
+    {%- endfor %}
+	{%- if hierarchy|length > 1 %}
+	{{class}}, err := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
+	{% else %}
+	{{class}}, err := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
+	{%- endif %}
+	
+	if err != nil {
+		return err
+	}
 
-    // TODO manage parent child relationship
-	{{class}}, err := aciClient.Create{{doc.slug_label}}(name, desc, models.GetMOName(tenantDn), {{class}}Attr)
-
+	err = aciClient.Save({{class}})
 	if err != nil {
 		return err
 	}
@@ -116,20 +153,33 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 	aciClient := m.(*client.Client)
 	name := d.Get("name").(string)
 	desc := d.Get("description").(string)
-	tenantDn := d.Get("tenant_dn").(string)
+
+	{%- for arg in hierarchy[-1]['args'] %}
+	{{arg}} := d.Get("{{arg}}").(string)
+	{%- endfor -%}
+	
+	{%- if hierarchy| length > 1 -%}
+	{{hierarchy[-2]["name"]}}Dn := d.Get("{{hierarchy[-2]["name"]|snakify}}_dn").(string)
+	{%- endif %}
 
     {{class}}Attr := models.{{doc.slug_label}}Attributes{}
-
-    {% for key in pkeys.keys() %} 
-
-	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
-    
+    {%- for key in pkeys.keys() %}     
     if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
         {{class}}Attr = {{key}}.(string)
     }
-    {% endfor %}
+    {%- endfor -%}
+	{%- if hierarchy|length > 1 -%}
+	{{class}}, err := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
+	{%- else %}
+	{{class}}, err := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
+	{%- endif %}	
+	if err != nil {
+		return err 
+	}
+	{{class}}.Status = "modified"
 
-	{{class}}, err := aciClient.Update{{doc.slug_label}}(name, desc, models.GetMOName(tenantDn), {{class}}Attr)
+	err = aciClient.Save({{class}})
+	
 	if err != nil {
 		return err
 	}
@@ -143,21 +193,28 @@ func resourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) er
 	aciClient := m.(*client.Client)
 
 	dn := d.Id()
-
-	bd, err := getRemote{{doc.slug_label}}(aciClient, dn)
+	{{class}}, err := getRemote{{doc.slug_label}}(aciClient, dn)
 
 	if err != nil {
 		return err
 	}
-	_ = set{{doc.slug_label}}Attributes(bd, d)
+	set{{doc.slug_label}}Attributes({{class}}, d)
 	return nil
 }
 
 func resourceAci{{doc.slug_label}}Delete(d *schema.ResourceData, m interface{}) error {
 	aciClient := m.(*client.Client)
 
-    // TODO manage parent child relationship
-	err := aciClient.Delete{{doc.slug_label}}(models.GetMOName(d.Id()), models.GetMOName(GetParentDn(d.Id())))
+	cont, err := aciClient.Get(d.Id())
+	if err != nil {
+		return err
+	}
+	{{class}} := models.{{doc.slug_label}}FromContainer(cont)
+	err = aciClient.Delete({{class}})
+	if err != nil {
+		return err
+	}
 
+	d.SetId("")
 	return err
 }

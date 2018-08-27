@@ -14,12 +14,15 @@ def get_terraform_context(mim, mo):
     context = get_context(mim, mo, "terraform")
     doc = context["doc"]
     all_parameters = context["keys"]
+    p_all_parameters = context["pkeys"]
 
     doc["slug_label"] = doc["label"].replace(" ","")
     all_parameters = {k: v for k, v in all_parameters.items() if k not in ignore_set}
-    
+    p_all_parameters = {k: v for k, v in p_all_parameters.items() if k not in ignore_set}
     context["doc"] = doc 
     context["keys"] = all_parameters
+    context["pkeys"] = p_all_parameters
+    print(context["hierarchy"])
     return context
 
 def gen_go_service(classes, meta):

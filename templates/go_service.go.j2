@@ -24,12 +24,23 @@ import (
 {% set dn -%}
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset %}
+{% set parent_dn -%}
+{% if hierarchy|length > 1 %}
+fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+{% else -%}
+fmt.Sprintf("uni")
+{%- endif %}
+{%- endset %}
+{%- set rn -%}
+fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+{%- endset %}
 
-func (sm *ServiceManager) Create{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
-	{{class}} := models.New{{doc.slug_label}}({{ args_list_reverse }}, description, {{class}}attr)
+func (sm *ServiceManager) Create{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {	
+	rn := {{ rn }}
+	parentDn := {{ parent_dn }}
+	{{class}} := models.New{{doc.slug_label}}(rn, parentDn, description, {{class}}attr)
 	err := sm.Save({{class}})
 	return {{class}}, err
-
 }
 
 func (sm *ServiceManager) Read{{doc.slug_label}}({{args_list_with_type_reverse}}) (*models.{{doc.slug_label}}, error) {
@@ -43,13 +54,16 @@ func (sm *ServiceManager) Read{{doc.slug_label}}({{args_list_with_type_reverse}}
 	return {{class}}, nil
 }
 
-func (sm *ServiceManager) Delete{{doc.slug_label}}(name string{% for object in hierarchy[:-1] %}, {{object.name}} string {% endfor  %}) error {
+func (sm *ServiceManager) Delete{{doc.slug_label}}({{args_list_with_type_reverse}}) error {
 	dn := {{ dn }}
 	return sm.DeleteByDn(dn, models.{{class|capitalize}}ClassName)
 }
 
 func (sm *ServiceManager) Update{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
-	{{class}} := models.New{{doc.slug_label}}({{ args_list_reverse }}, description, {{class}}attr)	
+	rn := {{ rn }}
+	parentDn := {{ parent_dn }}
+	{{class}} := models.New{{doc.slug_label}}(rn, parentDn, description, {{class}}attr)
+
     {{class}}.Status = "modified"
 	err := sm.Save({{class}})
 	return {{class}}, err
@@ -59,9 +73,9 @@ func (sm *ServiceManager) Update{{doc.slug_label}}({{args_list_with_type_reverse
 func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %}) ([]*models.{{doc.slug_label}}, error) {
 
 	baseurlStr := "/api/node/class"	
-	dn := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}/{{class}}.json", baseurlStr , {% for object in hierarchy[:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %})
+	dnUrl := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}/{{class}}.json", baseurlStr {% if hierarchy| length > 1 %}, {% endif %}{% for object in hierarchy[:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %})
     
-    cont, err := sm.GetViaURL(urlStr)
+    cont, err := sm.GetViaURL(dnUrl)
 	list := models.{{doc.slug_label}}ListFromContainer(cont)
 
 	return list, err
