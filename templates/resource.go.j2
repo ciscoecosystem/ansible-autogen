@@ -61,6 +61,7 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 			"{{key|snakify}}": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Description: "{{prop["help"]}}",
                 {% if prop["options"]| length != 0 %}
 				ValidateFunc: validation.StringInSlice([]string{
 				{%for option in prop["options"] -%}
@@ -82,7 +83,7 @@ func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{do
 
 	{{class}} := models.{{doc.slug_label}}FromContainer({{class}}Cont)
 
-	if {{class}}.DistinguishedName == "{}" {
+	if {{class}}.DistinguishedName == "" {
 		return nil, fmt.Errorf("Bridge Domain %s not found", {{class}}.DistinguishedName)
 	}
 
@@ -128,8 +129,8 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 	{{class}}Attr := models.{{doc.slug_label}}Attributes{}
 
     {%- for key in pkeys.keys() %} 
-    if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
-        {{class}}Attr.{{key|capital}}  = {{key}}.(string)
+    if tf{{key|capital}}, ok := d.GetOk("{{key|snakify}}"); ok {
+        {{class}}Attr.{{key|capital}}  = tf{{key|capital}}.(string)
     }
     {%- endfor %}
 	{%- if hierarchy|length > 1 %}
@@ -162,8 +163,8 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 
     {{class}}Attr := models.{{doc.slug_label}}Attributes{}
     {%- for key in pkeys.keys() %}     
-    if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
-        {{class}}Attr.{{key|capital}} = {{key}}.(string)
+    if tf{{key|capital}}, ok := d.GetOk("{{key|snakify}}"); ok {
+        {{class}}Attr.{{key|capital}} = tf{{key|capital}}.(string)
     }
     {%- endfor -%}
 	{% if hierarchy|length > 1 %}
