@@ -152,13 +152,13 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 	aciClient := m.(*client.Client)
 	desc := d.Get("description").(string)
 
-	{%- for arg in hierarchy[-1]['args'] %}
+	{% for arg in hierarchy[-1]['args'] %}
 	{{arg}} := d.Get("{{arg}}").(string)
 	{%- endfor -%}
 	
-	{%- if hierarchy| length > 1 -%}
+	{% if hierarchy| length > 1 %}
 	{{hierarchy[-2]["name"]}}Dn := d.Get("{{hierarchy[-2]["name"]|snakify}}_dn").(string)
-	{%- endif %}
+	{% endif %}
 
     {{class}}Attr := models.{{doc.slug_label}}Attributes{}
     {%- for key in pkeys.keys() %}     
@@ -166,11 +166,11 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
         {{class}}Attr.{{key|capital}} = {{key}}.(string)
     }
     {%- endfor -%}
-	{%- if hierarchy|length > 1 -%}
+	{% if hierarchy|length > 1 %}
 	{{class}} := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
-	{%- else %}
+	{% else %}
 	{{class}} := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
-	{%- endif %}	
+	{% endif %}	
 
 	{{class}}.Status = "modified"
 
@@ -201,7 +201,7 @@ func resourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) er
 func resourceAci{{doc.slug_label}}Delete(d *schema.ResourceData, m interface{}) error {
 	aciClient := m.(*client.Client)
 	dn := d.Id()
-	err = aciClient.DeleteByDn(dn, {{class}})
+	err := aciClient.DeleteByDn(dn, "{{class}}")
 	if err != nil {
 		return err
 	}
