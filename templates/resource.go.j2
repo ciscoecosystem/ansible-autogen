@@ -200,13 +200,8 @@ func resourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) er
 
 func resourceAci{{doc.slug_label}}Delete(d *schema.ResourceData, m interface{}) error {
 	aciClient := m.(*client.Client)
-
-	cont, err := aciClient.Get(d.Id())
-	if err != nil {
-		return err
-	}
-	{{class}} := models.{{doc.slug_label}}FromContainer(cont)
-	err = aciClient.Delete({{class}})
+	dn := d.Id()
+	err = aciClient.DeleteByDn(dn, {{class}})
 	if err != nil {
 		return err
 	}
