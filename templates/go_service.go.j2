@@ -2,9 +2,6 @@ package client
 
 import (
 	"fmt"
-	"strconv"
-
-	"bitbucket.org/crestdatasys/aci-go-client/container"
 
 	"bitbucket.org/crestdatasys/aci-go-client/models"
 )
@@ -21,15 +18,18 @@ import (
 {% set args_list -%}
 {% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset %}
+{% set args_list_minus_last -%}
+{% for object in hierarchy[:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %}
+{%- endset %}
 {% set dn -%}
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset %}
 {% set parent_dn -%}
 {% if hierarchy|length > 1 %}
 fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}", {{args_list}})
-{% else -%}
+{%- else -%}
 fmt.Sprintf("uni")
-{%- endif %}
+{%- endif -%}
 {%- endset %}
 {%- set rn -%}
 fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
