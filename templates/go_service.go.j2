@@ -25,8 +25,8 @@ import (
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset %}
 {% set parent_dn -%}
-{% if hierarchy|length > 1 %}
-fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+{%- if hierarchy|length > 1 -%}
+fmt.Sprintf("uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}", {{args_list_minus_last}})
 {%- else -%}
 fmt.Sprintf("uni")
 {%- endif -%}

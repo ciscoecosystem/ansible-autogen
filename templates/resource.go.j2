@@ -75,10 +75,12 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 }
 
 func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{doc.slug_label}}, error) {
-	{{class}}, err := client.Get(dn)
+	{{class}}Cont, err := client.Get(dn)
 	if err != nil {
 		return nil, err
 	}
+
+	{{class}} := models.{{doc.slug_label}}FromContainer({{class}}Cont)
 
 	if {{class}}.DistinguishedName == "{}" {
 		return nil, fmt.Errorf("Bridge Domain %s not found", {{class}}.DistinguishedName)
@@ -127,20 +129,17 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 
     {%- for key in pkeys.keys() %} 
     if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
-        {{class}}Attr = {{key}}.(string)
+        {{class}}Attr.{{key|capital}}  = {{key}}.(string)
     }
     {%- endfor %}
 	{%- if hierarchy|length > 1 %}
-	{{class}}, err := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
+	{{class}} := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
 	{% else %}
-	{{class}}, err := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
+	{{class}} := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
 	{%- endif %}
-	
-	if err != nil {
-		return err
-	}
 
-	err = aciClient.Save({{class}})
+
+	err := aciClient.Save({{class}})
 	if err != nil {
 		return err
 	}
@@ -151,7 +150,6 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 
 func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) error {
 	aciClient := m.(*client.Client)
-	name := d.Get("name").(string)
 	desc := d.Get("description").(string)
 
 	{%- for arg in hierarchy[-1]['args'] %}
@@ -165,20 +163,18 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
     {{class}}Attr := models.{{doc.slug_label}}Attributes{}
     {%- for key in pkeys.keys() %}     
     if {{key}}, ok := d.GetOk("{{key|snakify}}"); ok {
-        {{class}}Attr = {{key}}.(string)
+        {{class}}Attr.{{key|capital}} = {{key}}.(string)
     }
     {%- endfor -%}
 	{%- if hierarchy|length > 1 -%}
-	{{class}}, err := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
+	{{class}} := models.New{{doc.slug_label}}({{rn}},{{hierarchy[-2]["name"]}}Dn, desc, {{class}}Attr)  
 	{%- else %}
-	{{class}}, err := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
+	{{class}} := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
 	{%- endif %}	
-	if err != nil {
-		return err 
-	}
+
 	{{class}}.Status = "modified"
 
-	err = aciClient.Save({{class}})
+	err := aciClient.Save({{class}})
 	
 	if err != nil {
 		return err
