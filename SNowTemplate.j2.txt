@@ -43,7 +43,7 @@ Cisco_{{label}}.prototype = {
 			var {{p}} = {{label}}Result.imdata[j].{{label}}.attributes.{{p}};
 			{%- endif %}{% endfor %}{# properties excluding name and parent classes#}
 			var data_{{label}} = {} ;
-			data_{{label}}.name = this.APICip + "_" + {% for class_name in parent_classes %}{{class_name}}Name + "||" + {% endfor %}{{label}}Name ;
+			data_{{label}}.name = this.APICip + "_" + {% for class_name in parent_classes %}this.{{class_name}}Name + "||" + {% endfor %}{{label}}Name ;
 			{%- for i in range(1, parent_classes|length + 1) %}{# parent classes#}
 			data_{{label}}.{{parent_classes[i - 1]}}Name = this.APICip {% for j in range(i)%}+ "_" + this.{{parent_classes[j]}}Name{% endfor %} ;
 			{%- endfor %}{# parent classes#}
