@@ -129,8 +129,8 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 	{{class}}Attr := models.{{doc.slug_label}}Attributes{}
 
     {%- for key in pkeys.keys() %} 
-    if tf{{key|capital}}, ok := d.GetOk("{{key|snakify}}"); ok {
-        {{class}}Attr.{{key|capital}}  = tf{{key|capital}}.(string)
+    if {{key|capital}}, ok := d.GetOk("{{key|snakify}}"); ok {
+        {{class}}Attr.{{key|capital}}  = {{key|capital}}.(string)
     }
     {%- endfor %}
 	{%- if hierarchy|length > 1 %}
@@ -163,8 +163,8 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 
     {{class}}Attr := models.{{doc.slug_label}}Attributes{}
     {%- for key in pkeys.keys() %}     
-    if tf{{key|capital}}, ok := d.GetOk("{{key|snakify}}"); ok {
-        {{class}}Attr.{{key|capital}} = tf{{key|capital}}.(string)
+    if {{key|capital}}, ok := d.GetOk("{{key|snakify}}"); ok {
+        {{class}}Attr.{{key|capital}} = {{key|capital}}.(string)
     }
     {%- endfor -%}
 	{% if hierarchy|length > 1 %}
