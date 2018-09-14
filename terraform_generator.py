@@ -103,7 +103,7 @@ def gen_terraform_resource(classes, meta):
     for klass, value in model.items():
         print("Creating resource for {0}".format(klass))
         # out = "generated_{0}_module.py".format(klass)
-        out = "resource_aci_{}.go".format(snakify(klass))
+        out = "resource_aci_{}.go".format(klass.lower())
 
         # if value.isAbstract: # use abstract template
         #     context = {'klass': klass, 'name': value.name, 'label': value.label, 'description': value.help, 'filename': out}
