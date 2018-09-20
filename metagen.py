@@ -31,7 +31,7 @@ def generateClassMeta(className):
     paciClassMeta['isConfigurable'] = classMeta.isConfigurable()
     paciClassMeta['isDeletable'] = classMeta.isDeletable()
     paciClassMeta['help'] = classMeta.getHelp()
-    #paciClassMeta['name'] = classMeta.getPkgName() + ":" + classMeta.getClassName()
+    paciClassMeta['name'] = classMeta.getPkgName() + ":" + classMeta.getClassName()
     paciClassMeta['isRelation'] = classMeta.isRelation()
     paciClassMeta['identifiedBy'] = (
         [x for x in classMeta.getOrderedNamingProps()]
@@ -39,16 +39,16 @@ def generateClassMeta(className):
     paciClassMeta['rnFormat'] = re.sub(r'(%\((\w+)\)s)',
                                        r'{\2}',
                                        classMeta.getRnFormat())
-#    paciClassMeta['properties'] = {
-#        p.getName(): {
-#            'isConfigurable': p.isConfig(),
-#            'help': p._getHelp(),
-#            # 'options': p.getType().getLabelConstMap()
-#            # use p.getType().getConstants() for both str label and internal value
-#            'options': p.getType()._constMap.keys() if p.isConfig() else []
-#        }
-#        for p in classMeta.getProperties()
-#    }
+    paciClassMeta['properties'] = {
+       p.getName(): {
+           'isConfigurable': p.isConfig(),
+           'help': p._getHelp(),
+        #    'options': p.getType().getLabelConstMap()
+        #     use p.getType().getConstants() for both str label and internal value
+           'options': p.getType()._constMap.keys() if p.isConfig() else []
+       }
+       for p in classMeta.getProperties()
+    }
     paciClassMeta['contains'] = []
     for x in classMeta.getContainedClasses():
         paciClassMeta['contains'].append(getPaciClassName(x))

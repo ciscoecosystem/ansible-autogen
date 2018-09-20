@@ -6,6 +6,7 @@ from keyword import iskeyword
 from utils import PREFIX
 import os.path as p
 import sys
+import posixpath
 
 ignore_set = set(["descr","lcOwn","name","ownerKey", "ownerTag", "pcTag", "uid"])
 
@@ -46,7 +47,7 @@ def gen_go_service(classes, meta):
         lines.append("{} {}".format(klass, context['dn']))
         try:
             with open(out, 'w') as f:
-                mod = render(p.join(PREFIX,'go_service.go.j2'), context)
+                mod = render(posixpath.join(PREFIX,'go_service.go.j2'), context)
                 f.write(mod)
         except ModuleGenerationException as e:
             print(e,file=sys.stderr)
@@ -87,7 +88,7 @@ def gen_go_module(classes, meta):
         lines.append("{} {}".format(klass, context['dn']))
         try:
             with open(out, 'w') as f:
-                mod = render(p.join(PREFIX,'go_module.go.j2'), context)
+                mod = render(posixpath.join(PREFIX,'go_module.go.j2'), context)
                 f.write(mod)
         except ModuleGenerationException as e:
             print(e,file=sys.stderr)
@@ -116,7 +117,7 @@ def gen_terraform_resource(classes, meta):
         lines.append("{} {}".format(klass, context['dn']))
         try:
             with open(out, 'w') as f:
-                mod = render(p.join(PREFIX,'resource.go.j2'), context)
+                mod = render(posixpath.join(PREFIX,'resource.go.j2'), context)
                 f.write(mod)
         except ModuleGenerationException as e:
             print(e,file=sys.stderr)
