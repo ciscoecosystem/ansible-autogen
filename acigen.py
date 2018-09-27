@@ -81,6 +81,7 @@ def main():
             gen_go_module(classes, meta)
             gen_terraform_resource(classes, meta)
             gen_terraform_rdocs(classes,meta)
+            gen_terraform_acceptance_test(classes,meta)
     except ModuleGenerationException as e:
         logger.error(e)
 
