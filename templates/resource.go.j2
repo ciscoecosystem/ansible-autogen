@@ -1,13 +1,6 @@
 package aci
 
-import (
-	"fmt"
 
-	"github.com/ciscoecosystem/aci-go-client/client"
-	"github.com/ciscoecosystem/aci-go-client/models"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
-)
 
 {%- set args_list_with_type_reverse -%}
 {% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
@@ -30,6 +23,21 @@ fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg
 {%- set name -%}
 fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
 {%- endset %}
+{%- set validation_required -%}
+{%for key, prop in pkeys.items() %}{%- if prop["options"]| length != 0 -%}{%- if loop.index != pkey|length -%}true{%- else -%}false{%- endif -%}{%- endif -%}{% endfor %}
+{%- endset -%}
+
+{{ validation_required }}
+import (
+	"fmt"
+
+	"github.com/ciscoecosystem/aci-go-client/client"
+	"github.com/ciscoecosystem/aci-go-client/models"
+	"github.com/hashicorp/terraform/helper/schema"
+	{%- if validation_required %}
+	"github.com/hashicorp/terraform/helper/validation"
+	{%- endif %}
+)
 
 func resourceAci{{doc.slug_label}}() *schema.Resource {
 	return &schema.Resource{
@@ -61,6 +69,7 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 			"{{key|snakify}}": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: "{{prop["help"]}}",
                 {% if prop["options"]| length != 0 %}
 				ValidateFunc: validation.StringInSlice([]string{
@@ -96,8 +105,9 @@ func set{{doc.slug_label}}Attributes({{class}} *models.{{doc.slug_label}}, d *sc
 	{%- if hierarchy| length > 1 %}
 	d.Set("{{hierarchy[-2]["name"]|snakify}}_dn", GetParentDn({{class}}.DistinguishedName))
 	{%- endif %}
+	{{ class }}_map , _ := {{ class }}.ToMap()
     {% for key in pkeys.keys() %} 
-	d.Set("{{key|snakify}}", {{class}}.{{key|capital}})
+	d.Set("{{key|snakify}}", {{class}}_map["{{key}}"])
     {%- endfor %}
 	return d
 }
