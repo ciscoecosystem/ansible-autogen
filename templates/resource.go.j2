@@ -27,7 +27,6 @@ fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg
 {%for key, prop in pkeys.items() %}{%- if prop["options"]| length != 0 -%}{%- if loop.index != pkey|length -%}true{%- else -%}false{%- endif -%}{%- endif -%}{% endfor %}
 {%- endset -%}
 
-{{ validation_required }}
 import (
 	"fmt"
 
