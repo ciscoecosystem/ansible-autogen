@@ -3,11 +3,11 @@ layout: "aci"
 page_title: "ACI: aci_{{doc.slug_label|snakify}}"
 sidebar_current: "docs-aci-resource-{{doc.slug_label|snakify}}"
 description: |-
-  Manages ACI {{doc.slug_label}}
+  Manages ACI {{doc.label}}
 ---
 
 # aci_{{doc.slug_label|snakify}} #
-Manages ACI {{doc.slug_label}}
+Manages ACI {{doc.label}}
 
 ## Example Usage ##
 
@@ -15,7 +15,7 @@ Manages ACI {{doc.slug_label}}
 resource "aci_{{doc.slug_label|snakify}}" "example" {
 
 {% if hierarchy| length > 1 -%}
-  {{"  "+hierarchy[-2]["name"]|snakify}}_dn  = "${aci_{{hierarchy[-2]["name"]|snakify}}.example.id}"
+  {{"  "+hierarchy[-2]["label"]|snakify}}_dn  = "${aci_{{hierarchy[-2]["label"]|snakify}}.example.id}"
 {% endif -%}
 {% for arg in hierarchy[-1]['args'] -%}
   {{"  "+arg}}  = "example"
@@ -27,7 +27,7 @@ resource "aci_{{doc.slug_label|snakify}}" "example" {
 ```
 ## Argument Reference ##
 {% if hierarchy| length > 1 -%}
-* `{{hierarchy[-2]["name"]|snakify}}_dn` - (Required) Distinguished name of parent {{hierarchy[-2]["name"]}} object.
+* `{{hierarchy[-2]["label"]|snakify}}_dn` - (Required) Distinguished name of parent {{hierarchy[-2]["label"]}} object.
 {% endif -%}
 {% for arg in hierarchy[-1]['args']-%}
 * `{{arg}}` - (Required) {{arg}} of Object {{doc.slug_label|snakify}}.
@@ -39,3 +39,4 @@ resource "aci_{{doc.slug_label|snakify}}" "example" {
 * `{{key|snakify}}` - (Optional) {{prop["help"]}}
 {% endif -%}
 {% endfor -%}
+

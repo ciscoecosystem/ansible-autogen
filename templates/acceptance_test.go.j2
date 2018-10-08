@@ -36,7 +36,7 @@ func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
 			{
 				Config: testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }}),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['name']|snakify }}.foo{{ hierarchy[-1]['name']|snakify }}", &{{ doc.slug_label|snakify }}),
+					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label  ']|snakify }}", &{{ doc.slug_label|snakify }}),
 					testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list}}, description, &{{ doc.slug_label|snakify }}),
 				),
 			},
@@ -47,10 +47,10 @@ func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
 func testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }} string) string {
 	return fmt.Sprintf(`
 {% for ind in range(hierarchy|length) %}
-	resource "aci_{{ hierarchy[ind]['name']|snakify }}" "foo{{ hierarchy[ind]['name']|snakify }}" {
+	resource "aci_{{ hierarchy[ind]['label']|snakify }}" "foo{{ hierarchy[ind]['label']|snakify }}" {
 		name 		= "%s"
-		description = "{{ hierarchy[ind]['name']|snakify }} created while acceptance testing"
-{% if ind > 0 %}		{{ hierarchy[ind-1]['name']|snakify }}_dn = "${aci_{{ hierarchy[ind-1]['name']|snakify }}.foo{{ hierarchy[ind-1]['name']|snakify }}.id}"{% endif %}
+		description = "{{ hierarchy[ind]['label']|snakify }} created while acceptance testing"
+{% if ind > 0 %}		{{ hierarchy[ind-1]['label']|snakify }}_dn = "${aci_{{ hierarchy[ind-1]['label']|snakify }}.foo{{ hierarchy[ind-1]['label']|snakify }}.id}"{% endif %}
 	}
 {% endfor %}
 	`, {{ basic_arg_list }})
@@ -89,7 +89,7 @@ func testAccCheckAci{{ doc.slug_label }}Destroy(s *terraform.State) error {
 
 	for _, rs := range s.RootModule().Resources {
 		
-		 if rs.Type == "aci_{{ hierarchy[-1]['name']|snakify }}" {
+		 if rs.Type == "aci_{{ hierarchy[-1]['label']|snakify }}" {
 			cont,err := client.Get(rs.Primary.ID)
 			{{ doc.slug_label|snakify }} := models.{{ doc.slug_label }}FromContainer(cont)
 			if err == nil {

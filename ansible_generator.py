@@ -61,7 +61,8 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
                 args = [None]
             hierarchy.append({'name': klass,
                             'args': args,
-                            'rn': rn_format
+                            'rn': rn_format,
+                            'label': klass_mo.label.replace(" ","")
                             })
         else:
         # contruct rn format string
