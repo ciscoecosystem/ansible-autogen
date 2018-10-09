@@ -26,7 +26,7 @@ func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
 	{% for arg in hierarchy -%}
 	{{ arg['name']|snakify }}_name := acctest.RandString(5)
 	{% endfor -%}
-	description := "{{ hierarchy[-1]['name']|snakify }} created while acceptance testing"
+	description := "{{ hierarchy[-1]['label']|snakify }} created while acceptance testing"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:	  func(){ testAccPreCheck(t) },
@@ -36,7 +36,7 @@ func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
 			{
 				Config: testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }}),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label  ']|snakify }}", &{{ doc.slug_label|snakify }}),
+					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label']|snakify }}", &{{ doc.slug_label|snakify }}),
 					testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list}}, description, &{{ doc.slug_label|snakify }}),
 				),
 			},
@@ -107,12 +107,17 @@ func testAccCheckAci{{ doc.slug_label }}Destroy(s *terraform.State) error {
 func testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list }}, description string, {{ doc.slug_label|snakify }}  *models.{{ doc.slug_label }}) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 
-		{% for arg in hierarchy %}
+		
 
-		if {{ arg['name']|snakify }}_name != GetMOName({{ doc.slug_label|snakify }}.DistinguishedName) {
-			return fmt.Errorf("Bad {{ arg['name']|snakify }} %s", GetMOName({{ doc.slug_label|snakify }}.DistinguishedName))
+		if {{ hierarchy[-1]['name']|snakify }}_name != GetMOName({{ doc.slug_label|snakify }}.DistinguishedName) {
+			return fmt.Errorf("Bad {{ hierarchy[-1]['name']|snakify }} %s", GetMOName({{ doc.slug_label|snakify }}.DistinguishedName))
 		}
-		{% endfor %}
+		
+		{% if hierarchy| length > 1 -%}
+		if {{ hierarchy[-2]['name']|snakify }}_name != GetMOName(GetParentDn({{ doc.slug_label|snakify }}.DistinguishedName)){
+			return fmt.Errorf(" Bad {{ hierarchy[-2]['name']|snakify }} %s", GetMOName(GetParentDn({{ doc.slug_label|snakify }}.DistinguishedName)))
+		}
+		{% endif -%}
 		if description != {{ doc.slug_label|snakify }}.Description {
 			return fmt.Errorf("Bad {{ doc.slug_label|snakify }} Description %s", {{ doc.slug_label|snakify }}.Description)
 		}
