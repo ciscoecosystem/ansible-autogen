@@ -1,0 +1,128 @@
+package aci
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/ciscoecosystem/aci-go-client/client"
+	"github.com/ciscoecosystem/aci-go-client/models"
+	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/terraform"
+)
+
+
+
+{%- set basic_arg_list -%}
+{% for arg in hierarchy %}{{ arg['name']|snakify }}_name{%- if loop.index != hierarchy|length -%},{{ " " }}{%- endif -%}{% endfor %}
+{%- endset %}
+
+
+
+
+
+func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
+	var {{ doc.slug_label|snakify }} models.{{ doc.slug_label }}
+	{% for arg in hierarchy -%}
+	{{ arg['name']|snakify }}_name := acctest.RandString(5)
+	{% endfor -%}
+	description := "{{ hierarchy[-1]['label']|snakify }} created while acceptance testing"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:	  func(){ testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAci{{ doc.slug_label }}Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }}),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label']|snakify }}", &{{ doc.slug_label|snakify }}),
+					testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list}}, description, &{{ doc.slug_label|snakify }}),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }} string) string {
+	return fmt.Sprintf(`
+{% for ind in range(hierarchy|length) %}
+	resource "aci_{{ hierarchy[ind]['label']|snakify }}" "foo{{ hierarchy[ind]['label']|snakify }}" {
+		name 		= "%s"
+		description = "{{ hierarchy[ind]['label']|snakify }} created while acceptance testing"
+{% if ind > 0 %}		{{ hierarchy[ind-1]['label']|snakify }}_dn = "${aci_{{ hierarchy[ind-1]['label']|snakify }}.foo{{ hierarchy[ind-1]['label']|snakify }}.id}"{% endif %}
+	}
+{% endfor %}
+	`, {{ basic_arg_list }})
+}
+
+func testAccCheckAci{{ doc.slug_label }}Exists(name string, {{ doc.slug_label|snakify }} *models.{{ doc.slug_label }}) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[name]
+
+		if !ok {
+			return fmt.Errorf("{{ doc.label }} %s not found", name)
+		}
+
+		if rs.Primary.ID == "" {
+			return fmt.Errorf("No {{ doc.label }} dn was set")
+		}
+
+		client := testAccProvider.Meta().(*client.Client)
+
+		cont, err := client.Get(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		{{ doc.slug_label|snakify }}Found := models.{{ doc.slug_label }}FromContainer(cont)
+		if {{ doc.slug_label|snakify }}Found.DistinguishedName != rs.Primary.ID {
+			return fmt.Errorf("{{ doc.label }} %s not found", rs.Primary.ID)
+		}
+		*{{ doc.slug_label|snakify }} = *{{ doc.slug_label|snakify }}Found
+		return nil
+	}
+}
+
+func testAccCheckAci{{ doc.slug_label }}Destroy(s *terraform.State) error {
+	client := testAccProvider.Meta().(*client.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		
+		 if rs.Type == "aci_{{ hierarchy[-1]['label']|snakify }}" {
+			cont,err := client.Get(rs.Primary.ID)
+			{{ doc.slug_label|snakify }} := models.{{ doc.slug_label }}FromContainer(cont)
+			if err == nil {
+				return fmt.Errorf("{{ doc.label }} %s Still exists",{{ doc.slug_label|snakify }}.DistinguishedName)
+			}
+
+		}else{
+			continue
+		}
+	}
+
+	return nil
+}
+
+func testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list }}, description string, {{ doc.slug_label|snakify }}  *models.{{ doc.slug_label }}) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		
+
+		if {{ hierarchy[-1]['name']|snakify }}_name != GetMOName({{ doc.slug_label|snakify }}.DistinguishedName) {
+			return fmt.Errorf("Bad {{ hierarchy[-1]['name']|snakify }} %s", GetMOName({{ doc.slug_label|snakify }}.DistinguishedName))
+		}
+		
+		{% if hierarchy| length > 1 -%}
+		if {{ hierarchy[-2]['name']|snakify }}_name != GetMOName(GetParentDn({{ doc.slug_label|snakify }}.DistinguishedName)){
+			return fmt.Errorf(" Bad {{ hierarchy[-2]['name']|snakify }} %s", GetMOName(GetParentDn({{ doc.slug_label|snakify }}.DistinguishedName)))
+		}
+		{% endif -%}
+		if description != {{ doc.slug_label|snakify }}.Description {
+			return fmt.Errorf("Bad {{ doc.slug_label|snakify }} Description %s", {{ doc.slug_label|snakify }}.Description)
+		}
+
+		return nil
+	}
+}
+

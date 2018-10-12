@@ -1,0 +1,42 @@
+---
+layout: "aci"
+page_title: "ACI: aci_{{doc.slug_label|snakify}}"
+sidebar_current: "docs-aci-resource-{{doc.slug_label|snakify}}"
+description: |-
+  Manages ACI {{doc.label}}
+---
+
+# aci_{{doc.slug_label|snakify}} #
+Manages ACI {{doc.label}}
+
+## Example Usage ##
+
+```hcl
+resource "aci_{{doc.slug_label|snakify}}" "example" {
+
+{% if hierarchy| length > 1 -%}
+  {{"  "+hierarchy[-2]["label"]|snakify}}_dn  = "${aci_{{hierarchy[-2]["label"]|snakify}}.example.id}"
+{% endif -%}
+{% for arg in hierarchy[-1]['args'] -%}
+  {{"  "+arg}}  = "example"
+{% endfor -%}
+{%for key, prop in pkeys.items() -%}
+  {{"  "+key|snakify}}  = "example"
+{% endfor -%}
+}
+```
+## Argument Reference ##
+{% if hierarchy| length > 1 -%}
+* `{{hierarchy[-2]["label"]|snakify}}_dn` - (Required) Distinguished name of parent {{hierarchy[-2]["label"]}} object.
+{% endif -%}
+{% for arg in hierarchy[-1]['args']-%}
+* `{{arg}}` - (Required) {{arg}} of Object {{doc.slug_label|snakify}}.
+{% endfor -%}
+{%for key, prop in pkeys.items()-%}
+{% if prop["help"] == "Mo doc not defined in techpub!!!" -%}
+* `{{key|snakify}}` - (Optional) {{key|snakify}} for object {{doc.slug_label|snakify}}.
+{% else -%}
+* `{{key|snakify}}` - (Optional) {{prop["help"]}}
+{% endif -%}
+{% endfor -%}
+
