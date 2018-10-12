@@ -8,6 +8,7 @@ import re
 
 dir = PyClassDirectory()
 
+cardinalityList = ["ONE_TO_ONE", "ONE_TO_M", "N_TO_ONE", "N_TO_M"]
 
 def getPaciClassName(classMeta):
     return classMeta.getPkgName() + classMeta.getClassName()
@@ -88,11 +89,13 @@ def generateClassMeta(className):
             temppaciClassMeta = {}
             ### is a source relation class
             if hasattr(meta,'_type'):
-                temppaciClassMeta["cardinality"] = meta._type
+                temppaciClassMeta['relation'] = meta.getName().replace('.','')
+                temppaciClassMeta["cardinality"] = cardinalityList[meta._type]
                 temppaciClassMeta["class"] = meta.getTargetClassName().replace('.','')
                 paciClassMeta["relationTo"].append(temppaciClassMeta)
             else: ### is target relation class 
-                temppaciClassMeta["cardinality"] = -1
+                temppaciClassMeta['relation'] = meta.getName().replace('.','')
+                temppaciClassMeta["cardinality"] = "-1"
                 temppaciClassMeta["class"] = meta.getSourceClassName().replace('.','')
                 paciClassMeta["relationFrom"].append(temppaciClassMeta)
 
