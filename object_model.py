@@ -287,7 +287,10 @@ class MO:
             list of strings: ordered naming properties
         """
         return self.meta['identifiedBy']
-
+  
+    @property
+    def relationTo(self):
+        return self.meta['relationTo']
 
     @property
     def isAbstract(self):

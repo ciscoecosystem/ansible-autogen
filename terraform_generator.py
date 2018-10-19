@@ -16,10 +16,13 @@ def get_terraform_context(mim, mo):
     doc = context["doc"]
     all_parameters = context["keys"]
     p_all_parameters = context["pkeys"]
-
+    print(mo.relationTo)
     doc["slug_label"] = doc["label"].replace(" ","")
     all_parameters = {k: v for k, v in all_parameters.items() if k not in ignore_set}
     p_all_parameters = {k: v for k, v in p_all_parameters.items() if k not in ignore_set}
+    relTo = [rel["relation"] for rel in mo.relationTo ]
+    relContext = {relation: get_terraform_context(mim,mim.get_class(relation)) for relation in relTo}
+    context["relationTo"] = relContext
     context["doc"] = doc 
     context["keys"] = all_parameters
     context["pkeys"] = p_all_parameters
