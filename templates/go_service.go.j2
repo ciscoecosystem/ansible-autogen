@@ -105,9 +105,9 @@ func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}({{ rel_
 	containerJSON := []byte(fmt.Sprintf(`{
 		"%s": {
 			"attributes": {
-				"dn": "%s"
+				"dn": "%s",
 				{% for key in relContext['pkeys'] -%}
-				"{{ key }}": "%s"
+				"{{ key }}": "%s" {%- if loop.index != relContext['pkeys']|length -%}, {%- endif -%}
 				{%- endfor %}				
 			}
 		}
