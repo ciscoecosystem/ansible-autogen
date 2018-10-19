@@ -8,6 +8,7 @@ import os.path as p
 import sys
 import posixpath
 
+
 ignore_set = set(["descr","lcOwn","name","ownerKey", "ownerTag", "pcTag", "uid"])
 
 
@@ -20,8 +21,12 @@ def get_terraform_context(mim, mo):
     doc["slug_label"] = doc["label"].replace(" ","")
     all_parameters = {k: v for k, v in all_parameters.items() if k not in ignore_set}
     p_all_parameters = {k: v for k, v in p_all_parameters.items() if k not in ignore_set}
-    relTo = [rel["relation"] for rel in mo.relationTo ]
-    relContext = {relation: get_terraform_context(mim,mim.get_class(relation)) for relation in relTo}
+    relContext = {}
+    for relation in mo.relationTo:
+        terra_context = get_terraform_context(mim,mim.get_class(relation["relation"]))
+        terra_context["relToClass"] = relation["class"]
+        relContext[relation["relation"]] = terra_context
+        
     context["relationTo"] = relContext
     context["doc"] = doc 
     context["keys"] = all_parameters

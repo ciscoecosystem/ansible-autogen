@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/ciscoecosystem/aci-go-client/models"
+	"github.com/ciscoecosystem/aci-go-client/container"
+
 )
 
 {% set args_list_with_type_reverse -%}
@@ -80,3 +82,55 @@ func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]
 
 	return list, err
 }
+
+{% for rel,relContext in relationTo.items() %}
+{%- if relContext['doc']['deletable'] -%}
+{%- set rel_arg_list -%}
+{% for object in relContext['hierarchy'][:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != relContext['hierarchy'][:-1]|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set rel_parent_dn -%}
+	{%- if relContext['hierarchy']|length > 1 -%}
+		fmt.Sprintf("uni{% for object in relContext['hierarchy'][:-1] %}/{{object["rn"]}}{% endfor %}", {{rel_arg_list}})
+	{%- endif -%}
+{%- endset -%}
+{%- set rel_key_list -%}
+{%- for key in relContext['pkeys'] -%} {{ key }} {%- if loop.index != relContext['pkeys']|length -%},{%- endif -%} {%- endfor -%}
+{%- endset -%}
+{%- set rel_rn -%}
+{{ relContext['hierarchy'][-1]['rn'] }}
+{%- endset -%}
+func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}({{ rel_arg_list }}, {{ rel_key_list }} string) error {
+	parentDn := {{ rel_parent_dn }}
+	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['pkeys']['tDn'] -%}, tDn {%- endif -%})
+	containerJSON := []byte(fmt.Sprintf(`{
+		"%s": {
+			"attributes": {
+				"dn": "%s"
+				{% for key in relContext['pkeys'] -%}
+				"{{ key }}": "%s"
+				{%- endfor %}				
+			}
+		}
+	}`, "{{ rel }}", dn,{{ rel_key_list }} ))
+
+	jsonPayload, err := container.ParseJSON(containerJSON)
+	if err != nil {
+		return err
+	}
+
+	req, err := sm.client.MakeRestRequest("POST", fmt.Sprintf("%s.json", sm.MOURL), jsonPayload, true)
+	if err != nil {
+		return err
+	}
+
+	cont, _, err := sm.client.Do(req)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%+v", cont)
+
+	return nil
+}
+{%- endif -%}
+{% endfor %}
+

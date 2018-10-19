@@ -117,7 +117,8 @@ def get_context(mim, mo, kind):
                         # 'label': value['label'],
                         'help': value['help'],
                         'payload': key,
-                        'var': '_' + key if iskeyword(key) else key}
+                        'var': '_' + key if iskeyword(key) else key,
+                        'isConfigurable': value['isConfigurable']}
             if key == 'name':
                 details['aliases'] = [mo.label.lower().replace(" ", "_")]
             all_parameters[key] = details
