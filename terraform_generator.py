@@ -25,6 +25,7 @@ def get_terraform_context(mim, mo):
     for relation in mo.relationTo:
         terra_context = get_terraform_context(mim,mim.get_class(relation["relation"]))
         terra_context["relToClass"] = relation["class"]
+        terra_context["cardinality"] = relation["cardinality"]
         relContext[relation["relation"]] = terra_context
         
     context["relationTo"] = relContext

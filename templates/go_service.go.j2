@@ -99,8 +99,7 @@ func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]
 {%- set rel_rn -%}
 {{ relContext['hierarchy'][-1]['rn'] }}
 {%- endset -%}
-func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}({{ rel_arg_list }}, {{ rel_key_list }} string) error {
-	parentDn := {{ rel_parent_dn }}
+func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}( parentDn, {{ rel_key_list }} string) error {
 	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['pkeys']['tDn'] -%}, tDn {%- endif -%})
 	containerJSON := []byte(fmt.Sprintf(`{
 		"%s": {
@@ -132,8 +131,7 @@ func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}({{ rel_
 	return nil
 }
 
-func (sm *ServiceManager) DeleteRelationTo{{ relContext['relToClass'] }}({{ rel_arg_list }}, {{ rel_key_list }} string) error{
-	parentDn := {{ rel_parent_dn }}
+func (sm *ServiceManager) DeleteRelationTo{{ relContext['relToClass'] }}(parentDn, {{ rel_key_list }} string) error{
 	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['pkeys']['tDn'] -%}, tDn {%- endif -%})
 	return sm.DeleteByDn(dn , "{{ rel }}")
 }

@@ -31,7 +31,7 @@ fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg
 
 import (
 	"fmt"
-
+	"strings"
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -81,6 +81,19 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
                 {% endif %}
 			},
             {% endfor %}
+			{% for rel,relContext in relationTo.items() %}
+			{%- if relContext['doc']['deletable'] -%}   
+			"relation_to_{{ relContext['relToClass']|snakify }}": &schema.Schema{
+				Type: {%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}     schema.TypeString, {%- else %}     schema.TypeSet,{%- endif %}
+				Elem:     &schema.Schema{ Type: schema.TypeString,},
+				Optional: 	 true,
+				Computed: 	 true,
+				Description: "Create relation to {{ relContext['relToClass'] }}",
+				Set:         schema.HashString,
+			},
+			{%- endif -%}   
+			{%- endfor %}
+
 		}),
 	}
 }
@@ -149,12 +162,28 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 	{% else %}
 	{{class}} := models.New{{doc.slug_label}}({{rn}},"uni", desc, {{class}}Attr)  
 	{%- endif %}
-
-
+	
 	err := aciClient.Save({{class}})
 	if err != nil {
 		return err
 	}
+	{% for rel,relContext in relationTo.items() %}
+	{%- if relContext['doc']['deletable'] -%}   
+	if  relationTo{{ relContext['relToClass']}}, ok := d.GetOk("relation_to_{{ relContext['relToClass']|snakify }}") ; ok {
+		{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+		tDn := relationTo{{ relContext['relToClass']}}.(string)
+		err = aciClient.CreateRelationTo{{ relContext['relToClass'] }}({{relContext['hierarchy'][-2]["label"]}}Dn, tDn)
+		{%- else %}
+		tDnList := toStringList(relationTo{{ relContext['relToClass'] }}.(*schema.Set).List())
+		tDn := strings.join(tDnList,",")
+		err = aciClient.CreateRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, tDn)
+		{%- endif %}
+		if err != nil {
+			return err
+		}
+	}
+	{%- endif -%}   
+	{%- endfor %}
 
 	d.SetId({{class}}.DistinguishedName)
 	return resourceAci{{doc.slug_label}}Read(d, m)
