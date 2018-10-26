@@ -135,6 +135,6 @@ func (sm *ServiceManager) DeleteRelationTo{{ relContext['relToClass'] }}(parentD
 	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['pkeys']['tDn'] -%}, tDn {%- endif -%})
 	return sm.DeleteByDn(dn , "{{ rel }}")
 }
-{%- endif -%}
+{%- endif %}
 {% endfor %}
 
