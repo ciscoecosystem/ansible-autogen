@@ -1,0 +1,31 @@
+#%RAML 1.0
+title: Cisco ACI
+version: v1
+
+
+documentation:
+  - title: Cisco ACI
+    content: |
+      API specification of Cisco ACI.  
+
+
+baseUri: http://{APIC_IP}/api
+baseUriParameters: 
+  APIC_IP: 
+    required: true
+    description: enter IP address of your Cisco APIC
+
+
+traits:
+  secured: !include traits/secured.raml
+
+
+resourceTypes: 
+  get_all_objects: !include resourceTypes/get_all_objects.raml
+  crud_object: !include resourceTypes/crud_object.raml
+  get_object: !include resourceTypes/get_object.raml
+
+
+types:
+  login: !include dataTypes/login.raml
+  create_object: !include dataTypes/create_object.raml

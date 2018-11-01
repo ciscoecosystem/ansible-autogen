@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 from utils import render, snakify
 from ansible_generator import get_context
 from object_model import MIM, ModuleGenerationException

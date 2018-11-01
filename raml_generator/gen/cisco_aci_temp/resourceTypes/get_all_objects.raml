@@ -1,0 +1,28 @@
+#%RAML 1.0 ResourceType
+displayName: all << label >>s
+get:
+  is : [<< security >>]
+  displayName: list << label >>s
+  description: get details of all the << label >>s on your APIC
+  queryParameters:
+    rsp-subtree-include:
+      type: string
+      required: false
+      example: faults,health
+      description: include subtree like healths or fault
+  responses: 
+    200:
+      body:
+        application/json:
+          description: Request Successful
+          example: << object_example >>
+    403:
+      body:
+        application/json:
+          description: Invalid Token
+          example: {"response": "Forbidden"}
+    502:
+      body:
+        application/json:
+            description: Connection Refused
+            example: {"response": "Connection Refused"}

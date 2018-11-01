@@ -1,0 +1,18 @@
+
+
+
+/node/mo:
+  displayName: crud object
+  description: get, create, delete or update a object of a class by entering its name
+  /{dn}.json:
+    type: {
+      crud_object: {
+        "security": "secured",
+        "label": object,
+        "object_example": !include examples/expected_response/object.json,
+        "empty_response_example": !include examples/expected_response/empty_response.json,
+        "create_object_type": create_object,
+        "create_object_example": !include examples/expected_payload_for_creating_object/create_object.json,
+        "invalid_dn_example": !include examples/expected_response/invalid_dn.json
+      } 
+    }

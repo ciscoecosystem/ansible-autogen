@@ -48,7 +48,7 @@ class MIM:
             metad = json.loads(meta)
             self.meta = metad['classes']
 
-    def get_class(self, class_name):
+    def get_class(self, class_name, kind=None):
         """
         Parameters
         ----------
@@ -62,15 +62,15 @@ class MIM:
         if class_name not in self.meta: # first request for class when initialized without meta
             self._add_class(class_name)
         if 'dnFormat' not in self.meta[class_name]: # first request for class when initialized with meta
-            self._add_dn(class_name)
+            self._add_dn(class_name, kind)
 
         return MO(class_name, self.meta[class_name])
 
-    def _add_dn(self, class_name):
+    def _add_dn(self, class_name, kind):
         """Add the DNs for a specific class, only if initialized by meta file"""
         dns = []
 
-        def add_dn_helper(class_name, dn, class_list):
+        def add_dn_helper(class_name, dn, class_list, kind):
             """add lists of container hierarchy"""
             containers = self.meta[class_name]['containers']
             if len(containers) > 100: # recursion breaks with classes with too many classes TODO: find solution
@@ -79,12 +79,27 @@ class MIM:
                 dns.append((dn, class_list))
                 return
             for mo in containers:
-                updated_dn = self.meta[mo]['rnFormat'] + '/' + dn
+                rnFormat = self.meta[mo]['rnFormat']
+                if kind == 'raml':
+                    label = self.meta[mo]['label']
+                    
+                    for char in [' ', '/', '_']:
+                        label = label.replace(char, '-')
+                    label = re.sub('--+', '-', label)
+                    label = label.lower()
+                    
+                    brackety_string = re.findall('\{(.*?)\}', rnFormat)
+                    for curr_bracket in brackety_string:
+                        modified_bracket = '{{{}-{}}}'.format(label, curr_bracket)
+                        rnFormat = rnFormat.replace(
+                            '{'+curr_bracket+'}', modified_bracket)
+
+                updated_dn = rnFormat + '/' + dn
                 updated_class = class_list[:]
                 updated_class.insert(0, mo)
-                add_dn_helper(mo, updated_dn, updated_class)
+                add_dn_helper(mo, updated_dn, updated_class, kind)
 
-        add_dn_helper(class_name, self.meta[class_name]['rnFormat'], [class_name])
+        add_dn_helper(class_name, self.meta[class_name]['rnFormat'], [class_name], kind)
         self.meta[class_name]['dnFormat'] = dns
 
     def _add_class(self, class_name):

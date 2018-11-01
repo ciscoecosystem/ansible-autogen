@@ -1,0 +1,13 @@
+{
+    "totalCount": "1",
+    "imdata": [
+        {
+            "error": {
+                "attributes": {
+                    "code": "103",
+                    "text": "Cannot create construct; object uni/tn-x already exists."
+                }
+            }
+        }
+    ]
+}

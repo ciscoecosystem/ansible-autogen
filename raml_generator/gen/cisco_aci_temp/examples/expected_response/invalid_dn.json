@@ -1,0 +1,13 @@
+{
+    "totalCount": "1",
+    "imdata": [
+        {
+            "error": {
+                "attributes": {
+                    "code": "120",
+                    "text": "unknown property value tn-x, name dn, class construct [(Dn0)] Dn0=, "
+                }
+            }
+        }
+    ]
+}

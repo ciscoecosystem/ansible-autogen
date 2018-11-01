@@ -1,0 +1,9 @@
+  /{{ hierarchy }}.json:
+    type: {
+      get_object: {
+        "security": "secured",
+        "label": {{ label_with_parent }},
+        "object_example": !include examples/expected_response/{{ label }}.json,
+        "empty_response_example": !include examples/expected_response/empty_response.json
+      } 
+    }

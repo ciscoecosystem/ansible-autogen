@@ -1,0 +1,8 @@
+  /{{ class_name }}.json:
+    type: {
+      get_all_objects: {
+        "security": "secured",
+        "label": "{{ label }}",
+        "object_example": !include examples/expected_response/{{ label }}.json
+      } 
+    }

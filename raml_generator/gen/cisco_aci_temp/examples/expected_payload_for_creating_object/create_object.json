@@ -1,0 +1,11 @@
+{
+    "class_name": {
+        "attributes": {
+            "ownerKey": "ownerKey_value", 
+            "descr": "descr_value", 
+            "name": "name_value", 
+            "nameAlias": "nameAlias_value", 
+            "ownerTag": "ownerTag_value"
+        }
+    }
+}

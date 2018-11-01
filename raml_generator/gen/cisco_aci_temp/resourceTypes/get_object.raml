@@ -1,0 +1,25 @@
+#%RAML 1.0 ResourceType
+displayName: << label >>
+description: get, create, delete or update << label >>
+get:
+  is : [<< security >>]
+  displayName: get << label >>
+  description: get detail of << label >> by name
+  responses: 
+    200:
+      description: << label >> exist or does not exist
+      body:
+        application/json:
+          examples: 
+            if_exist: << object_example >>
+            else: << empty_response_example >>
+    403:
+      body:
+        application/json:
+          description: Invalid Token
+          example: {"response": "Forbidden"}
+    502:
+      body:
+        application/json:
+            description: Connection Refused
+            example: {"response": "Connection Refused"}

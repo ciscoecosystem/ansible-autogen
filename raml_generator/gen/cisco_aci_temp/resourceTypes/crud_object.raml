@@ -1,0 +1,79 @@
+#%RAML 1.0 ResourceType
+displayName: << label >>
+description: get, create, delete or update << label >>
+get:
+  is : [<< security >>]
+  displayName: get << label >>
+  description: get detail of << label >> by name
+  responses: 
+    200:
+      description: << label >> exist or does not exist
+      body:
+        application/json:
+          examples: 
+            if_exist: << object_example >>
+            else: << empty_response_example >>
+    403:
+      body:
+        application/json:
+          description: Invalid Token
+          example: {"response": "Forbidden"}
+    502:
+      body:
+        application/json:
+            description: Connection Refused
+            example: {"response": "Connection Refused"}
+post:
+  is : [<< security >>]
+  displayName: create or update << label >>
+  description: create or update << label >>
+  body: 
+    application/json:
+      type: << create_object_type >>
+      example: << create_object_example >>
+  responses: 
+    200:
+      description: created succesfully
+      body:
+        application/json:
+          example: << empty_response_example >>
+    400:
+      description: bad request can occur if dn entered is not proper
+      body:
+        application/json:
+          example: << invalid_dn_example >>
+    403:
+      body:
+        application/json:
+          description: Invalid Token
+          example: {"response": "Forbidden"}
+    502:
+      body:
+        application/json:
+            description: Connection Refused
+            example: {"response": "Connection Refused"}
+delete:
+  is : [<< security >>]
+  displayName: delete << label >>
+  description: delete << label >>
+  responses: 
+    200:
+      description: deleted succesfully
+      body:
+        application/json:
+          example: << empty_response_example >>
+    400:
+      description: bad request can occur if dn entered is not proper
+      body:
+        application/json:
+          example: << invalid_dn_example >>
+    403:
+      body:
+        application/json:
+          description: Invalid Token
+          example: {"response": "Forbidden"}
+    502:
+      body:
+        application/json:
+            description: Connection Refused
+            example: {"response": "Connection Refused"}

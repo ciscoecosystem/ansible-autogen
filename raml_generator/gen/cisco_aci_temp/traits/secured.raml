@@ -1,0 +1,8 @@
+#%RAML 1.0 Trait
+headers:
+  Cookie:
+    description: |
+      Used to send a valid access token. Token must be placed in this format - APIC-cookie=token
+    required: true
+    example: "#['APIC-cookie=' ++ vars.token['imdata'][0]['aaaLogin']['attributes']['token']]"
+    default: "#['APIC-cookie=' ++ vars.token['imdata'][0]['aaaLogin']['attributes']['token']]"

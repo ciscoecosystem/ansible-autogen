@@ -1,0 +1,25 @@
+{
+    "totalCount": "1", 
+    "imdata": [
+        {
+            "fvTenant": {
+                "attributes": {
+                    "dn": "uni/tn-192.168.130.10_kloudxp1", 
+                    "lcOwn": "local", 
+                    "ownerKey": "", 
+                    "name": "192.168.130.10_kloudxp1", 
+                    "descr": "", 
+                    "extMngdBy": "", 
+                    "status": "", 
+                    "monPolDn": "uni/tn-common/monepg-default", 
+                    "modTs": "2018-09-07T03:04:22.380-07:00", 
+                    "ownerTag": "", 
+                    "uid": "15374", 
+                    "nameAlias": "", 
+                    "annotation": "", 
+                    "childAction": ""
+                }
+            }
+        }
+    ]
+}

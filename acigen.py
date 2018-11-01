@@ -1,6 +1,5 @@
 
 #!/usr/bin/env python3
-
 import argparse
 import sys
 import logging
@@ -8,6 +7,7 @@ import re
 import json
 from utils import render
 from object_model import MIM, ModuleGenerationException
+from raml_generator.raml_generator import gen_raml_module
 from ansible_generator import gen_ansible_module
 from terraform_generator import *
 # ====================================================================================
@@ -49,6 +49,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--ansible', action='store_true', help='generate code for ansible module')
     group.add_argument('--terraform', action='store_true', help='generate model and service code for terraform provider')
+    group.add_argument('--raml', action='store_true', help='generate raml module')
     class_input_group = parser.add_mutually_exclusive_group(required=True)
     class_input_group.add_argument('-c', '--class', help='name of the class that the output module will manipulate', dest='klass')
     class_input_group.add_argument('-l', '--list', help='path of text file containing class names')
@@ -74,6 +75,9 @@ def main():
         # print(json.dumps(doc.terraform_get_context()))
         if args.ansible:
             classes = gen_ansible_module(classes, meta)
+        
+        elif args.raml:
+            gen_raml_module(classes, meta)
 
         elif args.terraform:
             pass 

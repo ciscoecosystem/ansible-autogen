@@ -1,0 +1,47 @@
+
+
+
+/aaaLogin.json:
+  displayName: aci login
+  description: aci login
+  post:
+    displayName: user login
+    description: Logs in the user and provides authentication token in response for subsequent requests
+    body:
+      application/json:
+        type: login
+        example: !include examples/expected_response/login_request.json
+    responses:
+      200:
+        body:
+          application/json:
+            description: Login successful, with authentication token in response
+            example: {"Login": "Successful"}
+      400:
+        body:
+          application/json:
+            description: Invalid login request
+            example: {"Login": "Bad Request"}
+      401:
+        body:
+          application/json:
+            description: Wrong Username or Password
+            example: {"Login": "Unauthorized"}
+      502:
+          body:
+            application/json:
+              description: Connection Refused
+              example: {"Login": "Connection Refused"}
+
+
+/node/class:
+  displayName: all objects
+  description: get all objects of a class
+  /{class_name}.json:
+    type: {
+      get_all_objects: {
+        "security": "secured",
+        "label": "object",
+        "object_example": !include examples/expected_response/object.json
+      } 
+    }
