@@ -44,9 +44,11 @@ class MIM:
 
         if not meta:
             self.meta = {}
+            self.rcount = 0
         else:
             metad = json.loads(meta)
             self.meta = metad['classes']
+            self.rcount = 0
 
     def get_class(self, class_name):
         """
@@ -69,9 +71,12 @@ class MIM:
     def _add_dn(self, class_name):
         """Add the DNs for a specific class, only if initialized by meta file"""
         dns = []
+        self.rcount = 0
 
         def add_dn_helper(class_name, dn, class_list):
             """add lists of container hierarchy"""
+            self.rcount = self.rcount +1
+            
             containers = self.meta[class_name]['containers']
             if len(containers) > 100: # recursion breaks with classes with too many classes TODO: find solution
                 raise ModuleGenerationException("Too many containers")
@@ -85,6 +90,7 @@ class MIM:
                 add_dn_helper(mo, updated_dn, updated_class)
 
         add_dn_helper(class_name, self.meta[class_name]['rnFormat'], [class_name])
+        print('recursion count',self.rcount)
         self.meta[class_name]['dnFormat'] = dns
 
     def _add_class(self, class_name):
@@ -252,7 +258,8 @@ class MO:
         list
             list of strings: class names of all container classes
         """
-        return list(self.meta['containers'].keys())
+        return list(self.meta['containers'])
+
 
     @property
     def contains(self):
@@ -321,6 +328,10 @@ class MO:
             true if class is deletable
         """
         return self.meta['isDeletable']
+    
+    @property
+    def isRelation(self):
+        return self.meta['isRelation']
 
     @property
     def label(self):
