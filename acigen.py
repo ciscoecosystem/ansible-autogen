@@ -75,12 +75,15 @@ def main():
             classes = gen_ansible_module(classes, meta)
 
         elif args.terraform:
-            pass 
-            gen_go_service(classes, meta)
-            gen_go_module(classes, meta)
-            gen_terraform_resource(classes, meta)
-            gen_terraform_rdocs(classes,meta)
-            gen_terraform_acceptance_test(classes,meta)
+            mim = MIM(meta)
+            model = {klass: mim.get_class(klass) for klass in classes}
+            for klass, value in model.items():
+                context = get_terraform_context(mim,value)
+                gen_go_service(klass,value,context)
+                gen_go_module(klass,value,context)
+                gen_terraform_resource(klass,value,context)
+                gen_terraform_rdocs(klass,value,context)
+                gen_terraform_acceptance_test(klass,value,context)
     except ModuleGenerationException as e:
         logger.error(e)
 
