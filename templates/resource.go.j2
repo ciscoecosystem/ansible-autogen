@@ -84,12 +84,12 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 			{%- if relContext['doc']['deletable'] -%}   
 			"relation_to_{{ relContext['relToClass']|snakify }}": &schema.Schema{
 				Type: {%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}     schema.TypeString, {%- else %}     schema.TypeSet,{%- endif %}
-{%- if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}				Elem:     &schema.Schema{ Type: schema.TypeString,},{% endif %}
+{% if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}				Elem:     &schema.Schema{ Type: schema.TypeString,},{% endif %}
 				Optional: 	 true,
 				Description: "Create relation to {{ relContext['relToClass'] }}",
-{%- if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}     				Set:         schema.HashString,{% endif %}
+{% if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}     				Set:         schema.HashString,{% endif %}
 			},
-			{%- endif -%}   
+			{% endif %}   
 			{%- endfor %}
 
 		}),

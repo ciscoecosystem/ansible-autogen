@@ -75,6 +75,7 @@ def main():
             classes = gen_ansible_module(classes, meta)
 
         elif args.terraform:
+
             mim = MIM(meta)
             model = {klass: mim.get_class(klass) for klass in classes}
             for klass, value in model.items():

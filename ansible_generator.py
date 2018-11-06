@@ -40,7 +40,7 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
             rn_format = replace_brases(rn_format)
 
         # get variable names
-        label = klass_mo.label.lower().replace(" ", "_")
+        label = klass_mo.label.lower().replace(" ", "_") if klass_mo.label else klass_mo.name.replace(":","")
         args = []
         for prop in props:
             if klass != target:
@@ -62,7 +62,7 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
             hierarchy.append({'name': klass,
                             'args': args,
                             'rn': rn_format,
-                            'label': klass_mo.label.replace(" ","")
+                            'label': klass_mo.label.replace(" ","") if klass_mo.label else klass_mo.name.replace(":","")
                             })
         else:
         # contruct rn format string
@@ -123,7 +123,7 @@ def get_context(mim, mo, kind):
                 details['aliases'] = [mo.label.lower().replace(" ", "_")]
             all_parameters[key] = details
 
-    attributes = {'label': mo.label,
+    attributes = {'label': mo.label if mo.label else mo.name.replace(":",""),
                     'deletable': mo.isDeletable,
                     'description': mo.help,
                     'name': mo.name,
