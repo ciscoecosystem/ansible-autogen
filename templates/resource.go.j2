@@ -82,13 +82,41 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
             {% endfor %}
 			{% for rel,relContext in relationTo.items() %}
 			{%- if relContext['doc']['deletable'] -%}   
-			"relation_to_{{ relContext['relToClass']|snakify }}": &schema.Schema{
+			{%- if relContext['doc']['identifiedBy']|length > 1 %}
+			{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+			"relation_{{ rel|snakify }}": &schema.Schema{
+				Type: schema.TypeMap,
+				Optional: true,
+				Description: "Create relation to {{ relContext["relToClass"] }}",
+				Elem: &schema.Schema{Type: schema.TypeString},
+			},
+			{%- else %}
+			"relation_{{ rel|snakify }}": &schema.Schema{
+			    Type: schema.TypeSet,
+				Optional: true,
+				Description: "Create relation to {{ relContext["relToClass"] }}",
+				Elem:     &schema.Resource{ 
+							Schema: map[string]*schema.Schema{
+							{%- for key in relContext['doc']['identifiedBy'] %}
+									"{{ key }}": {
+										Type: schema.TypeString,
+										Required: true,
+									},
+							{%- endfor %}
+							},
+				
+				},
+			},
+			{%- endif -%}
+			{%- else %}
+			"relation_{{ rel|snakify }}": &schema.Schema{
 				Type: {%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}     schema.TypeString, {%- else %}     schema.TypeSet,{%- endif %}
 {% if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}				Elem:     &schema.Schema{ Type: schema.TypeString,},{% endif %}
 				Optional: 	 true,
 				Description: "Create relation to {{ relContext['relToClass'] }}",
-{% if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}     				Set:         schema.HashString,{% endif %}
+{% if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}     			Set:         schema.HashString,{% endif %}
 			},
+			{%- endif -%}
 			{% endif %}   
 			{%- endfor %}
 
@@ -167,14 +195,40 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 	}
 	{% for rel,relContext in relationTo.items() %}
 	{%- if relContext['doc']['deletable'] -%}   
-	if  relationTo{{ relContext['relToClass']}}, ok := d.GetOk("relation_to_{{ relContext['relToClass']|snakify }}") ; ok {
+	{%- if relContext['doc']['identifiedBy']|length > 1 %}
+	if relationTo{{ rel }}, ok := d.GetOk("relation_{{ rel|snakify }}"); ok {
+	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+		relationParamMap := relationTo{{ rel }}.(map[string]interface{})
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}relationParamMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+		if err != nil {
+			return err
+		}
+	{%- else %}
+
+		relationParamList := relationTo{{ rel }}.(*schema.Set).List()
+		for _, relationParam := range relationParamList {
+			paramMap := relationParam.(map[string]interface{})
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+			if err != nil {
+				return err
+			}
+		}
+	
+	{%- endif %}
+
+	}
+	{%- else %}
+	if  relationTo{{ rel }}, ok := d.GetOk("relation_{{ rel|snakify }}") ; ok {
 		{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
-		tDn := relationTo{{ relContext['relToClass']}}.(string)
-		err = aciClient.CreateRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, tDn)
-		{%- else %}
-		tDnList := toStringList(relationTo{{ relContext['relToClass'] }}.(*schema.Set).List())
-		for _, tDn := range tDnList {
-			err = aciClient.CreateRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, tDn)
+		relationParam := relationTo{{ rel }}.(string)
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, relationParam)
+		if err != nil {
+			return err
+		}
+		{% else %}
+		relationParamList := toStringList(relationTo{{ rel }}.(*schema.Set).List())
+		for _, relationParam := range relationParamList {
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, relationParam)
 		
 			if err != nil {
 				return err
@@ -182,7 +236,8 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 		}
 		{%- endif %}
 	}
-	{%- endif -%}   
+	{%- endif %}
+	{% endif %}   
 	{%- endfor %}
 
 	d.SetId({{class}}.DistinguishedName)
@@ -222,19 +277,19 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 	}
 	{% for rel,relContext in relationTo.items() %}
 	{%- if relContext['doc']['deletable'] -%} 
-	if d.HasChange("relation_to_{{ relContext['relToClass']|snakify }}") {
+	if d.HasChange("relation_{{ rel | snakify }}") {
 	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
-		oldTdn, newTdn := d.GetChange("relation_to_{{ relContext['relToClass']|snakify }}")
-		err = aciClient.DeleteRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, oldTdn.(string))
+		oldTdn, newTdn := d.GetChange("relation_{{ rel | snakify }}")
+		err = aciClient.DeleteRelation{{ rel }}({{ class }}.DistinguishedName, oldTdn.(string))
 		if err != nil {
 			return err
 		}
-		err = aciClient.CreateRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, newTdn.(string))
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, newTdn.(string))
 		if err != nil {
 			return err
 		}
-	{%- else %}
-		oldc, newc := d.GetChange("relation_to_{{ relContext['relToClass']|snakify }}")
+	{% else %}
+		oldc, newc := d.GetChange("relation_{{ rel|snakify }}")
 		oldRelSet := oldc.(*schema.Set)
 		newRelSet := newc.(*schema.Set)
 
@@ -242,7 +297,7 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		relToCreate := toStringList(newRelSet.Difference(oldRelSet).List())
 
 		for _, relDn := range relToDelete {
-			err = aciClient.DeleteRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, relDn)
+			err = aciClient.DeleteRelation{{ rel }}({{ class }}.DistinguishedName, relDn)
 			if err != nil {
 				return err
 			}
@@ -250,7 +305,7 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		}
 
 		for _, relDn := range relToCreate {
-			err = aciClient.CreateRelationTo{{ relContext['relToClass'] }}({{ class }}.DistinguishedName, relDn)
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, relDn)
 			if err != nil {
 				return err
 			}
@@ -258,7 +313,7 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		}
 	{%- endif %}
 	}
-	{%- endif -%}   
+	{% endif %}   
 	{%- endfor %}
 
 	d.SetId({{class}}.DistinguishedName)

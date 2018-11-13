@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/ciscoecosystem/aci-go-client/models"
+	{%- if relationTo|length > 0 %}
 	"github.com/ciscoecosystem/aci-go-client/container"
+	{%- endif %}
 
 )
 
@@ -94,23 +96,27 @@ func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]
 	{%- endif -%}
 {%- endset -%}
 {%- set rel_key_list -%}
-{%- for key in relContext['pkeys'] -%} {{ key }} {%- if loop.index != relContext['pkeys']|length -%},{%- endif -%} {%- endfor -%}
+{%- if relContext['doc']['identifiedBy'] -%} 
+{%- for key in relContext['doc']['identifiedBy'] -%} {{ key }} {%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%} {%- endfor -%}
+{%- else -%}
+tn{{ relContext['relToClass'][0]|capitalize }}{{ relContext['relToClass'][1:]}}Name
+{%- endif -%}
 {%- endset -%}
 {%- set rel_rn -%}
 {{ relContext['hierarchy'][-1]['rn'] }}
 {%- endset -%}
-func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}( parentDn, {{ rel_key_list }} string) error {
-	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['pkeys']['tDn'] -%}, tDn {%- endif -%})
+func (sm *ServiceManager) CreateRelation{{ rel }}( parentDn, {{ rel_key_list }} string) error {
+	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }}{%- endif -%} )
 	containerJSON := []byte(fmt.Sprintf(`{
 		"%s": {
 			"attributes": {
 				"dn": "%s",
-				{% for key in relContext['pkeys'] -%}
-				"{{ key }}": "%s" {%- if loop.index != relContext['pkeys']|length -%}, {%- endif -%}
-				{%- endfor %}				
+				{% if not relContext['doc']['identifiedBy'] -%}
+				"{{ rel_key_list }}": "%s"
+				{%- endif %}				
 			}
 		}
-	}`, "{{ rel }}", dn,{{ rel_key_list }} ))
+	}`, "{{ rel }}", dn{%- if not relContext['doc']['identifiedBy'] -%},{{ rel_key_list }}{%- endif -%} ))
 
 	jsonPayload, err := container.ParseJSON(containerJSON)
 	if err != nil {
@@ -131,8 +137,8 @@ func (sm *ServiceManager) CreateRelationTo{{ relContext['relToClass'] }}( parent
 	return nil
 }
 
-func (sm *ServiceManager) DeleteRelationTo{{ relContext['relToClass'] }}(parentDn, {{ rel_key_list }} string) error{
-	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['pkeys']['tDn'] -%}, tDn {%- endif -%})
+func (sm *ServiceManager) DeleteRelation{{ rel }}(parentDn {% if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }} {% endif -%} string) error{
+	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }}{%- endif -%})
 	return sm.DeleteByDn(dn , "{{ rel }}")
 }
 {%- endif %}

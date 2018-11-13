@@ -129,7 +129,8 @@ def get_context(mim, mo, kind):
                     'name': mo.name,
                     'abstract': mo.isAbstract,
                     'configurable': mo.isConfigurable,
-                    'isRelation': mo.isRelation}
+                    'isRelation': mo.isRelation,
+                    'identifiedBy': mo.identifiedBy}
 
     # ask user to choose DN format
     if len(mo.dnFormat) > 1:
