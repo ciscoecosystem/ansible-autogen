@@ -110,10 +110,10 @@ func (sm *ServiceManager) CreateRelation{{ rel }}( parentDn, {{ rel_key_list }} 
 	containerJSON := []byte(fmt.Sprintf(`{
 		"%s": {
 			"attributes": {
-				"dn": "%s",
-				{% if not relContext['doc']['identifiedBy'] -%}
-				"{{ rel_key_list }}": "%s"
-				{%- endif %}				
+				"dn": "%s"
+				{%- if not relContext['doc']['identifiedBy'] -%}
+				,"{{ rel_key_list }}": "%s"
+				{% endif %}				
 			}
 		}
 	}`, "{{ rel }}", dn{%- if not relContext['doc']['identifiedBy'] -%},{{ rel_key_list }}{%- endif -%} ))

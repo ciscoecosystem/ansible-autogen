@@ -98,7 +98,7 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 				Elem:     &schema.Resource{ 
 							Schema: map[string]*schema.Schema{
 							{%- for key in relContext['doc']['identifiedBy'] %}
-									"{{ key }}": {
+									"{{ key|snakify }}": {
 										Type: schema.TypeString,
 										Required: true,
 									},
@@ -199,7 +199,7 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 	if relationTo{{ rel }}, ok := d.GetOk("relation_{{ rel|snakify }}"); ok {
 	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
 		relationParamMap := relationTo{{ rel }}.(map[string]interface{})
-		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}relationParamMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}relationParamMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 		relationParamList := relationTo{{ rel }}.(*schema.Set).List()
 		for _, relationParam := range relationParamList {
 			paramMap := relationParam.(map[string]interface{})
-			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
 			if err != nil {
 				return err
 			}
@@ -283,13 +283,13 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		oldRelParam, newRelParam := d.GetChange("relation_{{ rel | snakify }}")
 		oldRelParamMap := oldRelParam.(map[string]interface{})
 		newRelParamMap := newRelParam.(map[string]interface{})
-		err = aciClient.DeleteRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}oldRelParamMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+		err = aciClient.DeleteRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}oldRelParamMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
 		
 		if err != nil {
 			return err
 		}
 
-		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}newRelParamMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}newRelParamMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
 
 		if err != nil {
 			return err
@@ -298,16 +298,16 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		oldRel, newRel := d.GetChange("relation_{{ rel|snakify }}")
 		oldRelList := oldRel.(*schema.Set).List()
 		newRelList := newRel.(*schema.Set).List()
-		for _, relationParam range oldRelList{
+		for _, relationParam := range oldRelList{
 			paramMap := relationParam.(map[string]interface{})
-			err = aciClient.DeleteRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+			err = aciClient.DeleteRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
 			if err != nil {
 				return err
 			}
 		}
-		for _, relationParam range newRelList{
+		for _, relationParam := range newRelList{
 			paramMap := relationParam.(map[string]interface{})
-			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
 			if err != nil {
 				return err
 			}
