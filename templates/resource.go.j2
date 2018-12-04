@@ -34,9 +34,6 @@ import (
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
 	"github.com/hashicorp/terraform/helper/schema"
-	{%- if validation_required %}
-	"github.com/hashicorp/terraform/helper/validation"
-	{%- endif %}
 )
 
 func resourceAci{{doc.slug_label}}() *schema.Resource {
@@ -71,17 +68,9 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 				Optional: true,
 				Computed: true,
 				Description: "{{prop["help"]}}",
-                {% if prop["options"]| length != 0 %}
-				ValidateFunc: validation.StringInSlice([]string{
-				{%for option in prop["options"] -%}
-                 	"{{option}}",
-                {% endfor -%}
-				}, false),
-                {% endif %}
 			},
             {% endfor %}
 			{% for rel,relContext in relationTo.items() %}
-			{%- if relContext['doc']['deletable'] -%}   
 			{%- if relContext['doc']['identifiedBy']|length > 1 %}
 			{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
 			"relation_{{ rel|snakify }}": &schema.Schema{
@@ -117,7 +106,6 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 {% if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE' %}     			Set:         schema.HashString,{% endif %}
 			},
 			{%- endif -%}
-			{% endif %}   
 			{%- endfor %}
 
 		}),
@@ -194,7 +182,6 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 		return err
 	}
 	{% for rel,relContext in relationTo.items() %}
-	{%- if relContext['doc']['deletable'] -%}   
 	{%- if relContext['doc']['identifiedBy']|length > 1 %}
 	if relationTo{{ rel }}, ok := d.GetOk("relation_{{ rel|snakify }}"); ok {
 	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
@@ -237,7 +224,6 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 		{%- endif %}
 	}
 	{%- endif %}
-	{% endif %}   
 	{%- endfor %}
 
 	d.SetId({{class}}.DistinguishedName)
@@ -276,7 +262,7 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		return err
 	}
 	{% for rel,relContext in relationTo.items() %}
-	{%- if relContext['doc']['deletable'] -%} 
+	{%- if relContext['doc']['deletable'] %} 
 	if d.HasChange("relation_{{ rel | snakify }}") {
 	{%- if relContext['doc']['identifiedBy']|length > 1 %}
 	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
@@ -385,8 +371,85 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 		}
 	{%- endif %}
 	{%- endif %}
-	}
+{# code related to undeletable relations #}
+	{% else %}
+	if d.HasChange("relation_{{ rel | snakify }}") {
+	{%- if relContext['doc']['identifiedBy']|length > 1 %}
+	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+		_, newRelParam := d.GetChange("relation_{{ rel | snakify }}")
+		newRelParamMap := newRelParam.(map[string]interface{})
+
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}newRelParamMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+
+		if err != nil {
+			return err
+		}
+	{%- else %}
+		_, newRel := d.GetChange("relation_{{ rel|snakify }}")
+		newRelList := newRel.(*schema.Set).List()
+
+		for _, relationParam := range newRelList{
+			paramMap := relationParam.(map[string]interface{})
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName,{%- for key in relContext['doc']['identifiedBy'] %}paramMap["{{ key|snakify }}"].(string){%- if loop.index != relContext['doc']['identifiedBy']|length -%},{%- endif -%}{%- endfor %})
+			if err != nil {
+				return err
+			}
+		}
+	{%- endif %}
+	{%- elif relContext['doc']['identifiedBy']|length == 1  %}
+	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+		_, newRelParam := d.GetChange("relation_{{ rel | snakify }}")
+
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, newRelParam.(string))
+		if err != nil {
+			return err
+		}
+	{%- else %}
+		oldRel, newRel := d.GetChange("relation_{{ rel|snakify }}")
+		oldRelSet := oldRel.(*schema.Set)
+		newRelSet := newRel.(*schema.Set)
+		relToCreate := toStringList(newRelSet.Difference(oldRelSet).List())
+
+
+
+		for _, relDn := range relToCreate {
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, relDn)
+			if err != nil {
+				return err
+			}
+
+		}
+
+	{%- endif %}
+	{%- else %}
+
+	{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+		_, newRelParam := d.GetChange("relation_{{ rel | snakify }}")
+		err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, newRelParam.(string))
+		if err != nil {
+			return err
+		}
+	{% else %}
+		oldRel, newRel := d.GetChange("relation_{{ rel|snakify }}")
+		oldRelSet := oldRel.(*schema.Set)
+		newRelSet := newRel.(*schema.Set)
+
+		relToCreate := toStringList(newRelSet.Difference(oldRelSet).List())
+
+
+
+		for _, relDn := range relToCreate {
+			err = aciClient.CreateRelation{{ rel }}({{ class }}.DistinguishedName, relDn)
+			if err != nil {
+				return err
+			}
+
+		}
+	{%- endif %}
+	{%- endif %}
+	
 	{% endif %}   
+	}
 	{%- endfor %}
 
 	d.SetId({{class}}.DistinguishedName)

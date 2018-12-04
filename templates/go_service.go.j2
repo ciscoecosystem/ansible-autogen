@@ -86,7 +86,6 @@ func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]
 }
 
 {% for rel,relContext in relationTo.items() %}
-{%- if relContext['doc']['deletable'] -%}
 {%- set rel_arg_list -%}
 {% for object in relContext['hierarchy'][:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != relContext['hierarchy'][:-1]|length%},{%endif%}{% endfor %}
 {%- endset -%}
@@ -136,6 +135,8 @@ func (sm *ServiceManager) CreateRelation{{ rel }}( parentDn, {{ rel_key_list }} 
 
 	return nil
 }
+
+{%- if relContext['doc']['deletable'] %}
 
 func (sm *ServiceManager) DeleteRelation{{ rel }}(parentDn {% if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }} {% endif -%} string) error{
 	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }}{%- endif -%})
