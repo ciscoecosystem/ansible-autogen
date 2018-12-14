@@ -161,6 +161,14 @@ def get_context(mim, mo, kind):
             'doc': attributes,
             'dn': mo.dnFormat[choice][0]}
     # print(context)
+    relContext = {}
+    for relation in mo.relationTo:
+        relation_context = get_context(mim,mim.get_class(relation["relation"]),kind)
+        relation_context["relToClass"] = relation["class"]
+        relation_context["cardinality"] = relation["cardinality"]
+        relContext[relation["relation"]] = relation_context
+    
+    context["relationTo"] = relContext
     return context
 
 

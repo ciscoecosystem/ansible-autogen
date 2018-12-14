@@ -45,6 +45,17 @@ def main():
     argument_spec.update({ {% for key, value in keys.items()%}
         '{{key}}': dict(type='str',{%if value['options']|length > 0 %} choices={{value['options']}}, {% endif %}{%if value['aliases']|length > 0 %} aliases={{value['aliases']}}{% endif %}),{% endfor %}
         'state': dict(type='str', default='present', choices=['absent', 'present', 'query']),
+{% for rel,relContext in relationTo.items() %}
+    {%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' -%}
+        {%- if relContext['doc']['identifiedBy']|length > 1 %}
+        'relation_{{ rel|snakify }}': dict(type='dict'),
+        {%- else %}
+        'relation_{{ rel|snakify }}': dict(type='str'),
+        {%- endif %}
+    {%- else %}
+        'relation_{{ rel|snakify }}': dict(type='list'),
+    {%- endif %}
+{% endfor %}
     })
 
     module = AnsibleModule(
@@ -58,33 +69,76 @@ def main():
     {% for key, value in keys.items() %}
     {{value.var}} = module.params['{{key}}']{% endfor %}
     state = module.params['state']
+    child_configs=[]
+    {% for rel,relContext in relationTo.items() %}
+    relation_{{ rel|lower }} = module.params['relation_{{ rel|snakify }}']
+    {%- endfor -%}
+
+{% for rel,relContext in relationTo.items() %}
+{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+    if relation_{{ rel|lower }}:
+    {%- if relContext['doc']['identifiedBy']|length > 1 %}
+        child_configs.append({'{{ rel }}':{'attributes': { {% for key in relContext['doc']['identifiedBy'] %} '{{ key }}': relation_{{ rel|lower }}['{{ key }}'] {% if loop.index != relContext['doc']['identifiedBy']|length %},{% endif %} {% endfor %}}}})
+    {%- else -%}
+{# length of identifiedBy is less than 1 so if identifiedBy is there than use it otherwise use cruft to generate arg name #}
+    {%- set rel_arg_name -%}
+        {%- if relContext['doc']['identifiedBy'] -%} 
+            relContext['doc']['identifiedBy'][0] 
+        {%- else -%}
+            tn{{ relContext['relToClass'][0]|capitalize }}{{ relContext['relToClass'][1:]}}Name
+        {%- endif -%}
+    {%- endset %}
+        child_configs.append({'{{ rel }}': {'attributes': {'{{ rel_arg_name }}': relation_{{ rel|lower }}}}})
+    {%- endif -%}
+{%- else %}
+
+    if relation_{{ rel|lower }}:
+    {%- if relContext['doc']['identifiedBy']|length > 1 %}
+        for relation_param in relation_{{ rel|lower }}:
+            child_configs.append({'{{ rel }}':{'attributes': { {% for key in relContext['doc']['identifiedBy'] %}'{{ key }}': relation_param['{{ key }}'] {% if loop.index != relContext['doc']['identifiedBy']|length %},{% endif %} {% endfor %}}}})
+    {%- else -%}
+        {%- set rel_arg_name -%}
+        {%- if relContext['doc']['identifiedBy'] -%} 
+            {{ relContext['doc']['identifiedBy'][0] }}
+        {%- else -%}
+            tn{{ relContext['relToClass'][0]|capitalize }}{{ relContext['relToClass'][1:]}}Name
+        {%- endif -%}
+        {%- endset %}
+        for relation_param in relation_{{ rel|lower }}:
+            child_configs.append({'{{ rel }}': {'attributes': {'{{ rel_arg_name }}': relation_param}}})
+    {%- endif %}
+{%- endif -%}
+{%- endfor %}
 
     aci = ACIModule(module)
     aci.construct_url({% for object in hierarchy %}{% if loop.index0 == 0 %}
         root_class={
             'aci_class': '{{object.name}}',
             'aci_rn': {{object.rn}},
-            'filter_target': {{object.filter}},
+            'target_filter': {{object.filter}},
             'module_object': {{object.args[0]}}
         }, {% endif %}{% if loop.index0 == 1 %}
         subclass_1={
             'aci_class': '{{object.name}}',
             'aci_rn': {{object.rn}},
-            'filter_target': {{object.filter}},
+            'target_filter': {{object.filter}},
             'module_object': {{object.args[0]}}
         }, {% endif %}{% if loop.index0 == 2 %}
         subclass_2={
             'aci_class': '{{object.name}}',
             'aci_rn': {{object.rn}},
-            'filter_target': {{object.filter}},
+            'target_filter': {{object.filter}},
             'module_object': {{object.args[0]}}
         }, {% endif %}{% if loop.index0 == 3 %}
         subclass_3={
             'aci_class': '{{object.name}}',
             'aci_rn': {{object.rn}},
-            'filter_target': {{object.filter}},
+            'target_filter': {{object.filter}},
             'module_object': {{object.args[0]}}
         }, {% endif %}{% endfor %}
+        
+        child_classes=[{% for rel,relContext in relationTo.items() %}'{{ rel }}'{%- if loop.index != relationTo|length -%},{%- endif -%}{% endfor %}]
+        
     )
 
     aci.get_existing()
@@ -95,6 +149,8 @@ def main():
             class_config={ {% for key, value in pkeys.items() %}
                 '{{value.payload}}': {{value.var}},{% endfor %}
             },
+            child_configs=child_configs
+           
         )
 
         aci.get_diff(aci_class='{{class}}')

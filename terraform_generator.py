@@ -21,14 +21,7 @@ def get_terraform_context(mim, mo):
     doc["slug_label"] = doc["label"].replace(" ","")
     all_parameters = {k: v for k, v in all_parameters.items() if k not in ignore_set}
     p_all_parameters = {k: v for k, v in p_all_parameters.items() if k not in ignore_set}
-    relContext = {}
-    for relation in mo.relationTo:
-        terra_context = get_terraform_context(mim,mim.get_class(relation["relation"]))
-        terra_context["relToClass"] = relation["class"]
-        terra_context["cardinality"] = relation["cardinality"]
-        relContext[relation["relation"]] = terra_context
-        
-    context["relationTo"] = relContext
+
     context["doc"] = doc 
     context["keys"] = all_parameters
     context["pkeys"] = p_all_parameters
