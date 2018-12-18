@@ -40,3 +40,26 @@ resource "aci_{{doc.slug_label|snakify}}" "example" {
 {% endif -%}
 {% endfor -%}
 
+
+{# relation attributes from here #}
+{% for rel,relContext in relationTo.items() %}
+{%- set rel_type -%}
+{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+  {%- if relContext['doc']['identifiedBy']|length > 1 -%}
+  Map
+  {%- else -%}
+  String
+  {%- endif -%}
+{%- else -%}
+  {%- if relContext['doc']['identifiedBy']|length > 1 -%}
+  Set of Map
+  {%- else -%}
+  Set of String
+  {%- endif -%}
+{% endif %}
+{%- endset -%}
+* `relation_{{ rel|snakify }}` - (Optional) Relation to class {{ relContext['relToClass'] }}. Cardinality - {{ relContext["cardinality"] }}. Type - {{ rel_type }}.
+                
+{% endfor %}
+
+
