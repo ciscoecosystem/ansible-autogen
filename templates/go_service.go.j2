@@ -104,7 +104,7 @@ tn{{ relContext['relToClass'][0]|capitalize }}{{ relContext['relToClass'][1:]}}N
 {%- set rel_rn -%}
 {{ relContext['hierarchy'][-1]['rn'] }}
 {%- endset -%}
-func (sm *ServiceManager) CreateRelation{{ rel }}( parentDn, {{ rel_key_list }} string) error {
+func (sm *ServiceManager) CreateRelation{{ rel }}From{{ doc.slug_label }}( parentDn, {{ rel_key_list }} string) error {
 	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }}{%- endif -%} )
 	containerJSON := []byte(fmt.Sprintf(`{
 		"%s": {
@@ -138,7 +138,7 @@ func (sm *ServiceManager) CreateRelation{{ rel }}( parentDn, {{ rel_key_list }} 
 
 {%- if relContext['doc']['deletable'] %}
 
-func (sm *ServiceManager) DeleteRelation{{ rel }}(parentDn {% if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }} {% endif -%} string) error{
+func (sm *ServiceManager) DeleteRelation{{ rel }}From{{ doc.slug_label }}(parentDn {% if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }} {% endif -%} string) error{
 	dn := fmt.Sprintf("%s/{{ rel_rn }}", parentDn{%- if relContext['doc']['identifiedBy'] -%}, {{ rel_key_list }}{%- endif -%})
 	return sm.DeleteByDn(dn , "{{ rel }}")
 }
