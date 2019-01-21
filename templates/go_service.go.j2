@@ -11,22 +11,22 @@ import (
 )
 
 {% set args_list_with_type_reverse -%}
-{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy|reverse %}{% set outer_loop = loop %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index != hierarchy|length) and (loop.index == object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list_with_type -%}
-{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy %}{% set outer_loop = loop %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index == hierarchy|length) and (loop.index != object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list_reverse -%}
-{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy|reverse %}{% set outer_loop = loop %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index == hierarchy|length) and (loop.index != object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list -%}
-{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy %}{% set outer_loop = loop %}{% for arg in object["args"] %}{% if outer_loop.index > 1 %},{%endif%}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list_minus_last -%}
-{% for object in hierarchy[:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %}
+{% for object in hierarchy[:-1] %}{% set outer_loop = loop %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index != hierarchy[:-1]|length) and (loop.index == object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set dn -%}
-fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}"{% if args_list %}, {{args_list}}{% endif %})
 {%- endset %}
 {% set parent_dn -%}
 {%- if hierarchy|length > 1 -%}
@@ -36,10 +36,10 @@ fmt.Sprintf("uni")
 {%- endif -%}
 {%- endset %}
 {%- set rn -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{%if hierarchy[-1]['args']|length > 0 %},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
 {%- endset %}
 
-func (sm *ServiceManager) Create{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {	
+func (sm *ServiceManager) Create{{doc.slug_label}}({% if args_list_with_type_reverse %}{{args_list_with_type_reverse}}, {% endif %}description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {	
 	rn := {{ rn }}
 	parentDn := {{ parent_dn }}
 	{{class}} := models.New{{doc.slug_label}}(rn, parentDn, description, {{class}}attr)
@@ -63,7 +63,7 @@ func (sm *ServiceManager) Delete{{doc.slug_label}}({{args_list_with_type_reverse
 	return sm.DeleteByDn(dn, models.{{class|capitalize}}ClassName)
 }
 
-func (sm *ServiceManager) Update{{doc.slug_label}}({{args_list_with_type_reverse}} ,description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
+func (sm *ServiceManager) Update{{doc.slug_label}}({% if args_list_with_type_reverse %}{{args_list_with_type_reverse}} ,{% endif %}description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {
 	rn := {{ rn }}
 	parentDn := {{ parent_dn }}
 	{{class}} := models.New{{doc.slug_label}}(rn, parentDn, description, {{class}}attr)

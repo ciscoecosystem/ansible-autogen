@@ -63,7 +63,6 @@ def main():
     else:
         with open(args.list, 'r') as l:
             classes = list(map(lambda x: x.strip(), l.readlines()))
-
     if args.meta:
         with open(args.meta, 'r') as m:
             meta = m.read()

@@ -19,10 +19,10 @@ package aci
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset -%}
 {%- set rn -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
 {%- endset %}
 {%- set name -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
 {%- endset %}
 {%- set validation_required -%}
 {%for key, prop in pkeys.items() %}{%- if prop["options"]| length != 0 -%}{%- if loop.index != pkey|length -%}true{%- else -%}false{%- endif -%}{%- endif -%}{% endfor %}
@@ -57,18 +57,22 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 			},
 			{% endif -%}
 			{% for arg in hierarchy[-1]['args']%}
+			{% if arg %}
 			"{{arg}}": &schema.Schema{
 				Type: schema.TypeString,
 				Required: true,
 			},
+			{% endif %}
 			{% endfor %}
             {%for key, prop in pkeys.items() %}
+			{% if key not in hierarchy[-1]['args'] %}
 			"{{key|snakify}}": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 				Description: "{{prop["help"]}}",
 			},
+			{% endif %}
             {% endfor %}
 			{% for rel,relContext in relationTo.items() %}
 			{%- if relContext['doc']['identifiedBy']|length > 1 %}
@@ -159,7 +163,9 @@ func resourceAci{{doc.slug_label}}Create(d *schema.ResourceData, m interface{}) 
 	aciClient := m.(*client.Client)
 	desc := d.Get("description").(string)
 	{%- for arg in hierarchy[-1]['args']%}
+	{% if arg %}
 	{{arg}} := d.Get("{{arg}}").(string)
+	{% endif %}
 	{%- endfor %}
 	{%- if hierarchy|length > 1 %}
 	{{hierarchy[-2]["label"]}}Dn := d.Get("{{hierarchy[-2]["label"]|snakify}}_dn").(string)
@@ -235,7 +241,9 @@ func resourceAci{{doc.slug_label}}Update(d *schema.ResourceData, m interface{}) 
 	desc := d.Get("description").(string)
 
 	{% for arg in hierarchy[-1]['args'] %}
+	{% if arg %}
 	{{arg}} := d.Get("{{arg}}").(string)
+	{% endif %}
 	{%- endfor -%}
 	
 	{% if hierarchy| length > 1 %}

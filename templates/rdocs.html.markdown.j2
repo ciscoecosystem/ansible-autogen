@@ -18,7 +18,9 @@ resource "aci_{{doc.slug_label|snakify}}" "example" {
   {{"  "+hierarchy[-2]["label"]|snakify}}_dn  = "${aci_{{hierarchy[-2]["label"]|snakify}}.example.id}"
 {% endif -%}
 {% for arg in hierarchy[-1]['args'] -%}
+{% if arg %}
   {{"  "+arg}}  = "example"
+{% endif %}
 {% endfor -%}
 {%for key, prop in pkeys.items() -%}
   {{"  "+key|snakify}}  = "example"

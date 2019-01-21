@@ -40,7 +40,8 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
             rn_format = replace_brases(rn_format)
 
         # get variable names
-        label = klass_mo.label.lower().replace(" ", "_") if klass_mo.label else klass_mo.name.replace(":","")
+        label = klass_mo.label.lower().replace(" ", "_") if klass_mo.label else (klass_mo.name.replace(":","")).replace("'","")
+        label = label.replace("'","")
         args = []
         for prop in props:
             if klass != target:
@@ -58,11 +59,11 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
         
         if kind == "terraform":
             if len(args) == 0:
-                args = [None]
+                args = []
             hierarchy.append({'name': klass,
                             'args': args,
                             'rn': rn_format,
-                            'label': klass_mo.label.replace(" ","") if klass_mo.label else klass_mo.name.replace(":","")
+                            'label': ((klass_mo.label.replace(" ","")).replace("'","")).capitalize() if klass_mo.label else ((klass_mo.name.replace(":","")).replace("'","")).capitalize()
                             })
         else:
         # contruct rn format string
@@ -123,7 +124,7 @@ def get_context(mim, mo, kind):
                 details['aliases'] = [mo.label.lower().replace(" ", "_")]
             all_parameters[key] = details
 
-    attributes = {'label': mo.label if mo.label else mo.name.replace(":",""),
+    attributes = {'label': (mo.label.replace("'","")).capitalize() if mo.label else ((mo.name.replace(":","")).replace("'","")).capitalize(),
                     'deletable': mo.isDeletable,
                     'description': mo.help,
                     'name': mo.name,
@@ -160,7 +161,7 @@ def get_context(mim, mo, kind):
             'hierarchy': hierarchy,
             'doc': attributes,
             'dn': mo.dnFormat[choice][0]}
-    # print(context)
+    print("hierarchy",context['hierarchy'])
     relContext = {}
     for relation in mo.relationTo:
         relation_context = get_context(mim,mim.get_class(relation["relation"]),kind)
