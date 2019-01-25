@@ -1,0 +1,96 @@
+package aci
+
+
+
+
+{%- set args_list_with_type_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{% set args_list_with_type -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set args_list_reverse -%}
+{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set args_list -%}
+{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{%- endset -%}
+{%- set dn -%}
+fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
+{%- endset -%}
+{%- set rn -%}
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+{%- endset %}
+{%- set name -%}
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+{%- endset %}
+{%- set validation_required -%}
+{%for key, prop in pkeys.items() %}{%- if prop["options"]| length != 0 -%}{%- if loop.index != pkey|length -%}true{%- else -%}false{%- endif -%}{%- endif -%}{% endfor %}
+{%- endset %}
+{%- set rn -%}
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{%if hierarchy[-1]['args']|length > 0 %},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+{%- endset %}
+
+
+import (
+	"fmt"
+	"github.com/ciscoecosystem/aci-go-client/client"
+	"github.com/hashicorp/terraform/helper/schema"
+)
+
+func dataSourceAci{{doc.slug_label}}() *schema.Resource {
+	return &schema.Resource{
+
+		Read:   dataSourceAci{{doc.slug_label}}Read,
+
+		SchemaVersion: 1,
+
+		Schema: AppendBaseAttrSchema(map[string]*schema.Schema{
+			{% if hierarchy| length > 1 -%}
+			"{{hierarchy[-2]["label"]|snakify}}_dn": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			{% endif -%}
+			{% for arg in hierarchy[-1]['args']%}
+			{% if arg %}
+			"{{arg}}": &schema.Schema{
+				Type: schema.TypeString,
+				Required: true,
+			},
+			{% endif %}
+			{% endfor %}
+            
+            }),
+    }
+}
+
+
+
+func dataSourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) error {
+	aciClient := m.(*client.Client)
+    {%- for arg in hierarchy[-1]['args']%}
+	{% if arg %}
+	{{arg}} := d.Get("{{arg}}").(string)
+	{% endif %}
+	{%- endfor %}
+
+    rn := {{ rn }}
+    {% if hierarchy| length > 1 -%}
+    
+    {{hierarchy[-2]["label"]}}Dn := d.Get("{{hierarchy[-2]["label"]|snakify}}_dn").(string)
+
+    dn := fmt.Sprintf("%s/%s",{{hierarchy[-2]["label"]}}Dn,rn)
+    {% else %}
+    dn := fmt.Sprintf("uni/%s",rn )
+    {% endif %}
+
+	
+	{{class}}, err := getRemote{{doc.slug_label}}(aciClient, dn)
+
+	if err != nil {
+		return err
+	}
+	set{{doc.slug_label}}Attributes({{class}}, d)
+	return nil
+}

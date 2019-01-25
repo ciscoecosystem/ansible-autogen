@@ -151,4 +151,23 @@ def gen_terraform_acceptance_test(klass, value,context):
     print("Successfully created acceptance tests for {0}".format(klass))
 
     return lines
+
+def gen_terraform_data_source(klass, value,context):
+
+    lines  = [] # lines for class list text file
+
+    print("Creating data source  for {0}".format(klass))
+    out = "data_source_aci_{}.go".format(klass.lower())
+
+    context['filename'] = out
+    lines.append("{} {}".format(klass, context['dn']))
+    try:
+        with open(out, 'w') as f:
+            mod = render(posixpath.join(PREFIX,'datasource.go.j2'), context)
+            f.write(mod)
+    except ModuleGenerationException as e:
+        print(e,file=sys.stderr)
+    print("Successfully created data source for {0}".format(klass))
+
+    return lines
     

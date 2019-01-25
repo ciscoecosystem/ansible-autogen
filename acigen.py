@@ -84,6 +84,7 @@ def main():
                 gen_terraform_resource(klass,value,context)
                 gen_terraform_rdocs(klass,value,context)
                 gen_terraform_acceptance_test(klass,value,context)
+                gen_terraform_data_source(klass,value,context)
     except ModuleGenerationException as e:
         logger.error(e)
 
