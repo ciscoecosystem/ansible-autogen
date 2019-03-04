@@ -62,7 +62,6 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
                 args = []
             label_str = (klass_mo.label.replace(" ","")).replace("'","") if klass_mo.label else (klass_mo.name.replace(":","")).replace("'","")
             label_str = label_str[0].upper() + label_str[1:]
-            print("label ",label_str)
             hierarchy.append({'name': klass,
                             'args': args,
                             'rn': rn_format,
@@ -104,7 +103,6 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
                             'rn': rn,
                             'filter': filter_str
                             })
-    print(hierarchy)
     return hierarchy
 
 def get_ansible_context(mim, mo):
@@ -128,7 +126,6 @@ def get_context(mim, mo, kind):
             all_parameters[key] = details
     label_str = mo.label.replace("'","") if mo.label else (mo.name.replace(":","")).replace("'","")
     label_str = label_str[0].upper() + label_str[1:]
-    print("label in context ",label_str)
     attributes = {'label': label_str,
                     'deletable': mo.isDeletable,
                     'description': mo.help,
@@ -159,14 +156,12 @@ def get_context(mim, mo, kind):
     for key, value in all_parameters.items():
         if "payload" in value:
             payload_parameters[key] = value
-
     context = {'class': mo.klass,
             'keys': all_parameters,
             'pkeys': payload_parameters,
             'hierarchy': hierarchy,
             'doc': attributes,
             'dn': mo.dnFormat[choice][0]}
-    print("hierarchy",context['hierarchy'])
     relContext = {}
     for relation in mo.relationTo:
         relation_context = get_context(mim,mim.get_class(relation["relation"]),kind)

@@ -90,7 +90,6 @@ class MIM:
                 add_dn_helper(mo, updated_dn, updated_class)
 
         add_dn_helper(class_name, self.meta[class_name]['rnFormat'], [class_name])
-        print('recursion count',self.rcount)
         self.meta[class_name]['dnFormat'] = dns
 
     def _add_class(self, class_name):

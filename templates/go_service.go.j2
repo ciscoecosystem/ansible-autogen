@@ -1,5 +1,12 @@
 package client
 
+{%- set schema_required  = [0] -%}
+{%- for rel,relContext in relationTo.items() -%}
+{%- if relContext["cardinality"] != 'ONE_TO_ONE' and relContext["cardinality"] != 'N_TO_ONE'  -%}
+{% if schema_required.append(schema_required.pop() + 1) %}{% endif %}
+{%- endif -%}
+{%- endfor %}
+
 import (
 	"fmt"
 
@@ -7,6 +14,14 @@ import (
 	{%- if relationTo|length > 0 %}
 	"github.com/ciscoecosystem/aci-go-client/container"
 	{%- endif %}
+	{%- if schema_required.pop() > 0 %}
+	"github.com/hashicorp/terraform/helper/schema"
+	{% endif %}
+
+
+
+	
+
 
 )
 
@@ -143,5 +158,90 @@ func (sm *ServiceManager) DeleteRelation{{ rel }}From{{ doc.slug_label }}(parent
 	return sm.DeleteByDn(dn , "{{ rel }}")
 }
 {%- endif %}
+
+func (sm *ServiceManager) ReadRelation{{ rel }}From{{ doc.slug_label }}( parentDn string) (interface{},error) {
+	baseurlStr := "/api/node/class"	
+	dnUrl := fmt.Sprintf("%s/uni/%s/%s.json",baseurlStr,parentDn,"{{ rel }}")
+	cont, err := sm.GetViaURL(dnUrl)
+
+	contList := models.ListFromContainer(cont,"{{ rel }}")
+	{% if relContext['doc']['identifiedBy'] -%}
+		{%- if relContext['doc']['identifiedBy']|length > 1 %}
+			{% if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+	if len(contList) > 0 {
+		paramMap := make(map[string]string)
+					{% for key in relContext['doc']['identifiedBy'] %}
+		paramMap["{{ key }}"] = models.G(contList[0], "{{ key }}")
+					{% endfor %}
+		return paramMap, err
+	} else {
+		return nil,err
+	}
+			{%- else %}
+	st := make([]map[string]string, 0)
+
+	for _, contItem := range contList{
+		paramMap := make(map[string]string)
+		{% for key in relContext['doc']['identifiedBy'] -%}
+		paramMap["{{ key }}"] = models.G(contItem, "{{ key }}")
+		{% endfor %}
+		st = append(st, paramMap)
+
+	}
+
+	return st, err
+
+			{%- endif -%}
+
+	
+		{% else %}
+			{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+	if len(contList) > 0 {
+		dat := models.G(contList[0], "{{ relContext['doc']['identifiedBy'][0] }}")
+		return dat, err
+	} else {
+		return nil,err
+	}
+			{%- else %}
+	st := &schema.Set{
+		F: schema.HashString,
+	}
+	for _, contItem := range contList{
+		dat := models.G(contItem, "{{ relContext['doc']['identifiedBy'][0] }}")
+		st.Add(dat)
+	}
+	return st, err
+			{% endif -%}
+		{%- endif -%}
+	
+	{% else %}
+		{%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' %}
+	if len(contList) > 0 {
+		dat := models.G(contList[0], "{{ rel_key_list }}")
+		return dat, err
+	} else {
+		return nil,err
+	}
+		{% else %}
+	st := &schema.Set{
+		F: schema.HashString,
+	}
+	for _, contItem := range contList{
+		dat := models.G(contItem, "{{ rel_key_list }}")
+		st.Add(dat)
+	}
+	return st,err
+		{%- endif -%}
+
+
+
+	
+	{% endif %}
+
+
+
+
+
+}
 {% endfor %}
 

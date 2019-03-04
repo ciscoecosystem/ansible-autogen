@@ -31,6 +31,9 @@ fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{%
 
 import (
 	"fmt"
+	{%- if relationTo|length > 0 %}
+	"log"
+	{%- endif %}
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -115,7 +118,6 @@ func resourceAci{{doc.slug_label}}() *schema.Resource {
 		}),
 	}
 }
-
 func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{doc.slug_label}}, error) {
 	{{class}}Cont, err := client.Get(dn)
 	if err != nil {
@@ -125,7 +127,7 @@ func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{do
 	{{class}} := models.{{doc.slug_label}}FromContainer({{class}}Cont)
 
 	if {{class}}.DistinguishedName == "" {
-		return nil, fmt.Errorf("Bridge Domain %s not found", {{class}}.DistinguishedName)
+		return nil, fmt.Errorf("{{ doc.slug_label}} %s not found", {{class}}.DistinguishedName)
 	}
 
 	return {{class}}, nil
@@ -134,6 +136,7 @@ func getRemote{{doc.slug_label}}(client *client.Client, dn string) (*models.{{do
 func set{{doc.slug_label}}Attributes({{class}} *models.{{doc.slug_label}}, d *schema.ResourceData) *schema.ResourceData {
 	d.SetId({{class}}.DistinguishedName)
 	d.Set("description", {{class}}.Description)
+	d.Set("name", GetMOName({{class}}.DistinguishedName))
 	{%- if hierarchy| length > 1 %}
 	d.Set("{{hierarchy[-2]["label"]|snakify}}_dn", GetParentDn({{class}}.DistinguishedName))
 	{%- endif %}
@@ -472,9 +475,20 @@ func resourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) er
 	{{class}}, err := getRemote{{doc.slug_label}}(aciClient, dn)
 
 	if err != nil {
-		return err
+		d.SetId("")
+		return nil
 	}
 	set{{doc.slug_label}}Attributes({{class}}, d)
+	{% for rel,relContext in relationTo.items() %}
+	{{ rel }}Data, err := aciClient.ReadRelation{{ rel }}From{{ doc.slug_label }}(dn)
+	if err != nil {
+		log.Printf("[DEBUG] Error while reading relation {{ rel }} %v", err)
+
+	} else {
+		d.Set("relation_{{ rel|snakify }}",{{ rel }}Data)
+	}
+	{% endfor %}
+
 	return nil
 }
 
