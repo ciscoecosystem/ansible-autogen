@@ -7,6 +7,7 @@ from utils import PREFIX
 import os.path as p
 import sys
 import posixpath
+import re
 
 
 ignore_set = set(["descr","lcOwn","name","ownerKey", "ownerTag", "pcTag", "uid"])
@@ -17,7 +18,8 @@ def get_terraform_context(mim, mo):
     doc = context["doc"]
     all_parameters = context["keys"]
     p_all_parameters = context["pkeys"]
-    doc["slug_label"] = doc["label"].replace(" ","")
+    st = re.sub('[^A-Za-z0-9]+','',doc["label"])
+    doc["slug_label"] = st
     all_parameters = {k: v for k, v in all_parameters.items() if k not in ignore_set}
     p_all_parameters = {k: v for k, v in p_all_parameters.items() if k not in ignore_set}
 
@@ -87,7 +89,7 @@ def gen_terraform_rdocs(klass, value,context):
     lines  = [] # lines for class list text file
 
     print("Creating rdocs for {0}".format(klass))
-    out = "resource_aci_{}.html.markdown".format(klass.lower())
+    out = "{}.html.markdown".format(klass.lower())
 
     context['filename'] = out
     lines.append("{} {}".format(klass, context['dn']))
@@ -136,6 +138,25 @@ def gen_terraform_data_source(klass, value,context):
     except ModuleGenerationException as e:
         print(e,file=sys.stderr)
     print("Successfully created data source for {0}".format(klass))
+
+    return lines
+
+def gen_terraform_data_source_docs(klass, value,context):
+
+    lines  = [] # lines for class list text file
+
+    print("Creating data source docs for {0}".format(klass))
+    out = "data_source_{}.html.markdown".format(klass.lower())
+
+    context['filename'] = out
+    lines.append("{} {}".format(klass, context['dn']))
+    try:
+        with open(out, 'w') as f:
+            mod = render(posixpath.join(PREFIX,'datasource_docs.html.markdown.j2'), context)
+            f.write(mod)
+    except ModuleGenerationException as e:
+        print(e,file=sys.stderr)
+    print("Successfully created data source docs for {0}".format(klass))
 
     return lines
     

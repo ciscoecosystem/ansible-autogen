@@ -6,7 +6,6 @@ import (
 
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
-	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -23,9 +22,6 @@ import (
 
 func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
 	var {{ doc.slug_label|snakify }} models.{{ doc.slug_label }}
-	{% for arg in hierarchy -%}
-	{{ arg['name']|snakify }}_name := acctest.RandString(5)
-	{% endfor -%}
 	description := "{{ hierarchy[-1]['label']|snakify }} created while acceptance testing"
 
 	resource.Test(t, resource.TestCase{
@@ -34,26 +30,68 @@ func TestAccAci{{ doc.slug_label }}_Basic(t *testing.T) {
 		CheckDestroy: testAccCheckAci{{ doc.slug_label }}Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }}),
+				Config: testAccCheckAci{{ doc.slug_label }}Config_basic(description),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label']|snakify }}", &{{ doc.slug_label|snakify }}),
-					testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list}}, description, &{{ doc.slug_label|snakify }}),
+					testAccCheckAci{{ doc.slug_label }}Attributes(description, &{{ doc.slug_label|snakify }}),
+				),
+			},
+			{
+				ResourceName:      "aci_{{doc.slug_label|snakify}}",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAci{{ doc.slug_label }}_update(t *testing.T) {
+	var {{ doc.slug_label|snakify }} models.{{ doc.slug_label }}
+	description := "{{ hierarchy[-1]['label']|snakify }} created while acceptance testing"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t)},
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAci{{ doc.slug_label }}Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCheckAci{{ doc.slug_label }}Config_basic(description),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label']|snakify }}", &{{ doc.slug_label|snakify }}),
+					testAccCheckAci{{ doc.slug_label }}Attributes(description, &{{ doc.slug_label|snakify }}),
+				),
+			},
+			{
+				Config: testAccCheckAci{{ doc.slug_label }}Config_basic(description),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAci{{ doc.slug_label }}Exists("aci_{{ hierarchy[-1]['label']|snakify }}.foo{{ hierarchy[-1]['label']|snakify }}", &{{ doc.slug_label|snakify }}),
+					testAccCheckAci{{ doc.slug_label }}Attributes(description, &{{ doc.slug_label|snakify }}),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckAci{{ doc.slug_label }}Config_basic({{ basic_arg_list }} string) string {
+func testAccCheckAci{{ doc.slug_label }}Config_basic(description string) string {
 	return fmt.Sprintf(`
-{% for ind in range(hierarchy|length) %}
-	resource "aci_{{ hierarchy[ind]['label']|snakify }}" "foo{{ hierarchy[ind]['label']|snakify }}" {
-		name 		= "%s"
-		description = "{{ hierarchy[ind]['label']|snakify }} created while acceptance testing"
-{% if ind > 0 %}		{{ hierarchy[ind-1]['label']|snakify }}_dn = "${aci_{{ hierarchy[ind-1]['label']|snakify }}.foo{{ hierarchy[ind-1]['label']|snakify }}.id}"{% endif %}
+
+	resource "aci_{{ doc.slug_label|snakify }}" "foo{{ doc.slug_label|snakify }}" {
+		{% if hierarchy| length > 1 -%}
+		{{"  "+hierarchy[-2]["label"]|snakify}}_dn  = "${aci_{{hierarchy[-2]["label"]|snakify}}.example.id}"
+		{% endif -%}
+		description = "%s"
+		{% for arg in hierarchy[-1]['args'].keys()|list -%}
+		{% if arg %}
+		{{arg}}  = "example"
+		{% endif -%}
+		{% endfor -%}
+		{%for key, prop in pkeys.items() -%}
+		{%- if key|snakify not in hierarchy[-1]['args'].keys()|list -%}
+		{{"  "+key|snakify}}  = "example"
+		{% endif -%}
+		{% endfor -%}
 	}
-{% endfor %}
-	`, {{ basic_arg_list }})
+	`, description)
 }
 
 func testAccCheckAci{{ doc.slug_label }}Exists(name string, {{ doc.slug_label|snakify }} *models.{{ doc.slug_label }}) resource.TestCheckFunc {
@@ -104,25 +142,30 @@ func testAccCheckAci{{ doc.slug_label }}Destroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckAci{{ doc.slug_label }}Attributes({{ basic_arg_list }}, description string, {{ doc.slug_label|snakify }}  *models.{{ doc.slug_label }}) resource.TestCheckFunc {
+func testAccCheckAci{{ doc.slug_label }}Attributes(description string, {{ doc.slug_label|snakify }}  *models.{{ doc.slug_label }}) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 
-		
-
-		if {{ hierarchy[-1]['name']|snakify }}_name != GetMOName({{ doc.slug_label|snakify }}.DistinguishedName) {
-			return fmt.Errorf("Bad {{ hierarchy[-1]['name']|snakify }} %s", GetMOName({{ doc.slug_label|snakify }}.DistinguishedName))
-		}
-		
-		{% if hierarchy| length > 1 -%}
-		if {{ hierarchy[-2]['name']|snakify }}_name != GetMOName(GetParentDn({{ doc.slug_label|snakify }}.DistinguishedName)){
-			return fmt.Errorf(" Bad {{ hierarchy[-2]['name']|snakify }} %s", GetMOName(GetParentDn({{ doc.slug_label|snakify }}.DistinguishedName)))
-		}
-		{% endif -%}
 		if description != {{ doc.slug_label|snakify }}.Description {
 			return fmt.Errorf("Bad {{ doc.slug_label|snakify }} Description %s", {{ doc.slug_label|snakify }}.Description)
 		}
-
-		return nil
+		
+{%if pkeys|length != 0 or hierarchy[-1]['args'].keys()|list != 0 %}
+	{% for arg in hierarchy[-1]['args'].keys()|list %}
+	{% if arg %}
+		if "example" != {{ doc.slug_label|snakify }}.{{ arg|capital }} {
+			return fmt.Errorf("Bad {{ doc.slug_label|snakify }} {{ arg|snakify }} %s", {{ doc.slug_label|snakify }}.{{ arg|capital }})
+		}
+	{% endif %}
+	{% endfor %}
+    {% for key in pkeys.keys()|list -%}
+	{% if key|snakify not in hierarchy[-1]['args'].keys()|list %}
+		if "example" != {{ doc.slug_label|snakify }}.{{ key|capital }} {
+			return fmt.Errorf("Bad {{ doc.slug_label|snakify }} {{ key|snakify }} %s", {{ doc.slug_label|snakify }}.{{ key|capital }})
+		}
+	{% endif %}
+    {% endfor %}
+{% endif %}
+	return nil
 	}
 }
 

@@ -26,19 +26,19 @@ import (
 )
 
 {% set args_list_with_type_reverse -%}
-{% for object in hierarchy|reverse %}{% set outer_loop = loop %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index != hierarchy|length) and (loop.index == object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
+{% for object in hierarchy|reverse %}{% set outer_loop = loop %}{% for arg in object["args"].keys()|list|reverse %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% if (outer_loop.index != hierarchy|length) and (loop.index == object["args"].keys()|list|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list_with_type -%}
-{% for object in hierarchy %}{% set outer_loop = loop %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index == hierarchy|length) and (loop.index != object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
+{% for object in hierarchy %}{% set outer_loop = loop %}{% for arg in object["args"].keys()|list %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% if (outer_loop.index == hierarchy|length) and (loop.index != object["args"].keys()|list|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list_reverse -%}
-{% for object in hierarchy|reverse %}{% set outer_loop = loop %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index == hierarchy|length) and (loop.index != object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
+{% for object in hierarchy|reverse %}{% set outer_loop = loop %}{% for arg in object["args"].keys()|list|reverse %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% if (outer_loop.index == hierarchy|length) and (loop.index != object["args"].keys()|list|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list -%}
-{% for object in hierarchy %}{% set outer_loop = loop %}{% for arg in object["args"] %}{% if outer_loop.index > 1 %},{%endif%}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% endfor %}
+{% for object in hierarchy %}{% set outer_loop = loop %}{% for arg in object["args"].keys()|list %}{% if outer_loop.index > 1 %},{%endif%}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set args_list_minus_last -%}
-{% for object in hierarchy[:-1] %}{% set outer_loop = loop %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% if (outer_loop.index != hierarchy[:-1]|length) and (loop.index == object["args"]|length) %},{%endif%}{% endfor %}{% endfor %}
+{% for object in hierarchy[:-1] %}{% set outer_loop = loop %}{% for arg in object["args"].keys()|list %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% if (outer_loop.index != hierarchy[:-1]|length) and (loop.index == object["args"].keys()|list|length) %},{%endif%}{% endfor %}{% endfor %}
 {%- endset %}
 {% set dn -%}
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}"{% if args_list %}, {{args_list}}{% endif %})
@@ -51,7 +51,7 @@ fmt.Sprintf("uni")
 {%- endif -%}
 {%- endset %}
 {%- set rn -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}"{%if hierarchy[-1]['args']|length > 0 %},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{%if hierarchy[-1]['args'].keys()|list|length > 0 %},{% endif %}{% for arg in hierarchy[-1]['args'].keys()|list %}{{arg}}{% if loop.index != hierarchy[-1]['args'].keys()|list|length %}, {%endif%}{% endfor %})
 {%- endset %}
 
 func (sm *ServiceManager) Create{{doc.slug_label}}({% if args_list_with_type_reverse %}{{args_list_with_type_reverse}}, {% endif %}description string, {{class}}attr models.{{doc.slug_label}}Attributes) (*models.{{doc.slug_label}}, error) {	
@@ -89,10 +89,10 @@ func (sm *ServiceManager) Update{{doc.slug_label}}({% if args_list_with_type_rev
 
 }
 
-func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %}) ([]*models.{{doc.slug_label}}, error) {
+func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]|reverse %}{% for arg in object["args"].keys()|list|reverse %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %}) ([]*models.{{doc.slug_label}}, error) {
 
 	baseurlStr := "/api/node/class"	
-	dnUrl := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}/{{class}}.json", baseurlStr {% if hierarchy| length > 1 %}, {% endif %}{% for object in hierarchy[:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %})
+	dnUrl := fmt.Sprintf("%s/uni{% for object in hierarchy[:-1] %}/{{object["rn"]}}{% endfor %}/{{class}}.json", baseurlStr {% if hierarchy| length > 1 %}, {% endif %}{% for object in hierarchy[:-1] %}{% for arg in object["args"].keys()|list %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy[:-1]|length%},{%endif%}{% endfor %})
     
     cont, err := sm.GetViaURL(dnUrl)
 	list := models.{{doc.slug_label}}ListFromContainer(cont)
@@ -102,7 +102,7 @@ func (sm *ServiceManager) List{{doc.slug_label}}({% for object in hierarchy[:-1]
 
 {% for rel,relContext in relationTo.items() %}
 {%- set rel_arg_list -%}
-{% for object in relContext['hierarchy'][:-1] %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != relContext['hierarchy'][:-1]|length%},{%endif%}{% endfor %}
+{% for object in relContext['hierarchy'][:-1] %}{% for arg in object["args"].keys()|list %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != relContext['hierarchy'][:-1]|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set rel_parent_dn -%}
 	{%- if relContext['hierarchy']|length > 1 -%}
@@ -161,7 +161,7 @@ func (sm *ServiceManager) DeleteRelation{{ rel }}From{{ doc.slug_label }}(parent
 
 func (sm *ServiceManager) ReadRelation{{ rel }}From{{ doc.slug_label }}( parentDn string) (interface{},error) {
 	baseurlStr := "/api/node/class"	
-	dnUrl := fmt.Sprintf("%s/uni/%s/%s.json",baseurlStr,parentDn,"{{ rel }}")
+	dnUrl := fmt.Sprintf("%s/%s/%s.json",baseurlStr,parentDn,"{{ rel }}")
 	cont, err := sm.GetViaURL(dnUrl)
 
 	contList := models.ListFromContainer(cont,"{{ rel }}")

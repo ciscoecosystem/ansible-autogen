@@ -8,9 +8,10 @@ import os.path as p
 from jinja2 import Environment, FileSystemLoader
 from object_model import MIM, ModuleGenerationException
 from keyword import iskeyword
-from utils import PREFIX, render
+from utils import PREFIX, render,snakify
 
 
+not_allowed = ['type','id']
 
 def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
     """add parent class naming to ansible parameters and return hierarchy dict"""
@@ -42,7 +43,7 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
         # get variable names
         label = klass_mo.label.lower().replace(" ", "_") if klass_mo.label else (klass_mo.name.replace(":","")).replace("'","")
         label = label.replace("'","")
-        args = []
+        args = {}
         for prop in props:
             if klass != target:
                 # import pdb; pdb.set_trace()
@@ -50,16 +51,22 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
                             'naming': True,
                             'help': klass_mo.properties[prop]['help']}
                 var = label if prop == "name" else "{0}_{1}".format(label, prop)
-                args.append(var)
+                if var in not_allowed:
+                    args["{0}_{1}".format(label,var)] = var
+                else:
+                    args[var] = var
                 details['var'] = var
                 all_parameters[var] = details
             else:
                 all_parameters[prop]['naming'] = True
-                args.append(all_parameters[prop]['var'])
+                if all_parameters[prop]['var'] in not_allowed:
+                    args["{0}_{1}".format(label,all_parameters[prop]['var'])] = all_parameters[prop]['var']
+                else:
+                    args[all_parameters[prop]['var']] = all_parameters[prop]['var']
         
         if kind == "terraform":
             if len(args) == 0:
-                args = []
+                args = {}
             label_str = (klass_mo.label.replace(" ","")).replace("'","") if klass_mo.label else (klass_mo.name.replace(":","")).replace("'","")
             label_str = label_str[0].upper() + label_str[1:]
             hierarchy.append({'name': klass,
@@ -112,18 +119,22 @@ def get_ansible_context(mim, mo):
 def get_context(mim, mo, kind):
 
     all_parameters = {} # will add other class naming later
+    ro_params = {}
     for key, value in mo.properties.items():
+        details = {'options': value['options'], #TODO: make sure options for is a list, not dict
+            # 'options': list(value['options'].keys()),
+            # 'label': value['label'],
+            'help': value['help'],
+            'payload': key,
+            'var': '_' + key if iskeyword(key) else key,
+            'isConfigurable': value['isConfigurable']}
+        if key == 'name':
+            details['aliases'] = [mo.label.lower().replace(" ", "_")]
         if value['isConfigurable']:
-            details = {'options': value['options'], #TODO: make sure options for is a list, not dict
-                        # 'options': list(value['options'].keys()),
-                        # 'label': value['label'],
-                        'help': value['help'],
-                        'payload': key,
-                        'var': '_' + key if iskeyword(key) else key,
-                        'isConfigurable': value['isConfigurable']}
-            if key == 'name':
-                details['aliases'] = [mo.label.lower().replace(" ", "_")]
             all_parameters[key] = details
+        else:
+            ro_params[key] = details
+
     label_str = mo.label.replace("'","") if mo.label else (mo.name.replace(":","")).replace("'","")
     label_str = label_str[0].upper() + label_str[1:]
     attributes = {'label': label_str,
@@ -155,10 +166,22 @@ def get_context(mim, mo, kind):
     payload_parameters = {} #target class properties only #TODO just copy all parameters first
     for key, value in all_parameters.items():
         if "payload" in value:
-            payload_parameters[key] = value
+            if key in not_allowed:
+                payload_parameters["{0}_{1}".format(label_str.replace(" ",""),key)] = value
+            else:
+                payload_parameters[key] = value
+    ro_parameteres = {}
+
+    for key, value in ro_params.items():
+        if "payload" in value:
+            if key in not_allowed:
+                ro_parameteres["{0}_{1}".format(label_str.replace(" ",""),key)] = value
+            else:
+                ro_parameteres[key] = value
     context = {'class': mo.klass,
             'keys': all_parameters,
             'pkeys': payload_parameters,
+            'rokeys': ro_parameteres,
             'hierarchy': hierarchy,
             'doc': attributes,
             'dn': mo.dnFormat[choice][0]}

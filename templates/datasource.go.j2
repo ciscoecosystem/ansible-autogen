@@ -4,31 +4,31 @@ package aci
 
 
 {%- set args_list_with_type_reverse -%}
-{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy|reverse %}{% for arg in object["args"].keys()|list|list|reverse %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {% set args_list_with_type -%}
-{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy %}{% for arg in object["args"].keys()|list %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set args_list_reverse -%}
-{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy|reverse %}{% for arg in object["args"].keys()|list|reverse %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set args_list -%}
-{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy %}{% for arg in object["args"].keys()|list %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set dn -%}
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset -%}
 {%- set rn -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args'].keys()|list|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args'].keys()|list%}{{arg}}{% if loop.index != hierarchy[-1]['args'].keys()|list|length %}, {%endif%}{% endfor %})
 {%- endset %}
 {%- set name -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args']|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{% if hierarchy[-1]['args'].keys()|list|length > 0%},{% endif %}{% for arg in hierarchy[-1]['args'].keys()|list%}{{arg}}{% if loop.index != hierarchy[-1]['args'].keys()|list|length %}, {%endif%}{% endfor %})
 {%- endset %}
 {%- set validation_required -%}
 {%for key, prop in pkeys.items() %}{%- if prop["options"]| length != 0 -%}{%- if loop.index != pkey|length -%}true{%- else -%}false{%- endif -%}{%- endif -%}{% endfor %}
 {%- endset %}
 {%- set rn -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}"{%if hierarchy[-1]['args']|length > 0 %},{% endif %}{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}"{%if hierarchy[-1]['args'].keys()|list|length > 0 %},{% endif %}{% for arg in hierarchy[-1]['args'].keys()|list%}{{arg}}{% if loop.index != hierarchy[-1]['args'].keys()|list|length %}, {%endif%}{% endfor %})
 {%- endset %}
 
 
@@ -52,7 +52,7 @@ func dataSourceAci{{doc.slug_label}}() *schema.Resource {
 				Required: true,
 			},
 			{% endif -%}
-			{% for arg in hierarchy[-1]['args']%}
+			{% for arg in hierarchy[-1]['args'].keys()|list%}
 			{% if arg %}
 			"{{arg}}": &schema.Schema{
 				Type: schema.TypeString,
@@ -60,7 +60,15 @@ func dataSourceAci{{doc.slug_label}}() *schema.Resource {
 			},
 			{% endif %}
 			{% endfor %}
-            
+            {%for key, prop in pkeys.items() %}
+			{% if key|snakify not in hierarchy[-1]['args'].keys()|list %}
+			"{{key|snakify}}": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			{% endif %}
+            {% endfor %}
             }),
     }
 }
@@ -69,7 +77,7 @@ func dataSourceAci{{doc.slug_label}}() *schema.Resource {
 
 func dataSourceAci{{doc.slug_label}}Read(d *schema.ResourceData, m interface{}) error {
 	aciClient := m.(*client.Client)
-    {%- for arg in hierarchy[-1]['args']%}
+    {%- for arg in hierarchy[-1]['args'].keys()|list%}
 	{% if arg %}
 	{{arg}} := d.Get("{{arg}}").(string)
 	{% endif %}

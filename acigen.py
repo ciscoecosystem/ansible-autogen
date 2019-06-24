@@ -5,6 +5,7 @@ import sys
 import logging
 import re
 import json
+import pickle
 from utils import render
 from object_model import MIM, ModuleGenerationException
 from ansible_generator import gen_ansible_module
@@ -40,8 +41,14 @@ class MyLogger(object):
 # # Replace stderr with logging to file at ERROR level
 # sys.stderr = MyLogger(logger, logging.ERROR)
 # # ------------------------------------------------------------------------------------
+def writeObjectsToMap(context):
+    temp_map = {}
+    temp_map['args'] = context['hierarchy'][-1]['args']
+    temp_map['keys'] = list(context['pkeys'].keys())
+    temp_map['rel_keys'] = list(context['relationTo'].keys())
+    attr_map[context['doc']['slug_label']] = temp_map
 
-
+attr_map = {}
 def main():
     parser = argparse.ArgumentParser(description='Utility to create Module for a specified ACI class')
     parser.add_argument("-m","--meta", help="Location of the meta json file", required=True)
@@ -85,6 +92,7 @@ def main():
                 gen_terraform_rdocs(klass,value,context)
                 gen_terraform_acceptance_test(klass,value,context)
                 gen_terraform_data_source(klass,value,context)
+                gen_terraform_data_source_docs(klass,value,context)
     except ModuleGenerationException as e:
         logger.error(e)
 
@@ -92,3 +100,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+

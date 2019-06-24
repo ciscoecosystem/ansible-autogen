@@ -1,0 +1,45 @@
+---
+layout: "aci"
+page_title: "ACI: aci_{{doc.slug_label|snakify}}"
+sidebar_current: "docs-aci-data-source-{{doc.slug_label|snakify}}"
+description: |-
+  Data source for ACI {{doc.label}}
+---
+
+# aci_{{doc.slug_label|snakify}} #
+Data source for ACI {{doc.label}}
+{% if 'cloud' in doc.slug_label|snakify %}Note: This resource is supported in Cloud APIC only. {%- endif %}
+## Example Usage ##
+
+```hcl
+data "aci_{{doc.slug_label|snakify}}" "example" {
+
+{% if hierarchy| length > 1 -%}
+  {{"  "+hierarchy[-2]["label"]|snakify}}_dn  = "${aci_{{hierarchy[-2]["label"]|snakify}}.example.id}"
+{% endif -%}
+{% for arg in hierarchy[-1]['args'].keys()|list -%}
+{% if arg %}
+  {{arg}}  = "example"
+{% endif -%}
+{% endfor -%}
+}
+```
+## Argument Reference ##
+{% if hierarchy| length > 1 -%}
+* `{{hierarchy[-2]["label"]|snakify}}_dn` - (Required) Distinguished name of parent {{hierarchy[-2]["label"]}} object.
+{% endif -%}
+{% for arg in hierarchy[-1]['args'].keys()|list-%}
+* `{{arg}}` - (Required) {{arg}} of Object {{doc.slug_label|snakify}}.
+{% endfor %}
+
+
+## Attribute Reference
+
+* `id` - Attribute id set to the Dn of the {{ doc.label }}.
+{%for key, prop in pkeys.items()-%}
+{% if prop["help"] == "Mo doc not defined in techpub!!!" -%}
+* `{{key|snakify}}` - (Optional) {{key|snakify}} for object {{doc.slug_label|snakify}}.
+{% else -%}
+* `{{key|snakify}}` - (Optional) {{prop["help"]}}
+{% endif -%}
+{% endfor -%}

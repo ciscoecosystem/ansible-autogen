@@ -9,22 +9,22 @@ import (
 )
 
 {%- set args_list_with_type_reverse -%}
-{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy|reverse %}{% for arg in object["args"].keys()|list|reverse %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {% set args_list_with_type -%}
-{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} string {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy %}{% for arg in object["args"].keys()|list %}{{arg}} string {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set args_list_reverse -%}
-{% for object in hierarchy|reverse %}{% for arg in object["args"]|reverse %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy|reverse %}{% for arg in object["args"].keys()|list|reverse %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set args_list -%}
-{% for object in hierarchy %}{% for arg in object["args"] %}{{arg}} {% if loop.index != object["args"]|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
+{% for object in hierarchy %}{% for arg in object["args"].keys()|list %}{{arg}} {% if loop.index != object["args"].keys()|list|length %}, {%endif%}{% endfor %}{% if loop.index != hierarchy|length%},{%endif%}{% endfor %}
 {%- endset -%}
 {%- set dn -%}
 fmt.Sprintf("uni{% for object in hierarchy %}/{{object["rn"]}}{% endfor %}", {{args_list}})
 {%- endset -%}
 {%- set rn -%}
-fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args']%}{{arg}}{% if loop.index != hierarchy[-1]['args']|length %}, {%endif%}{% endfor %})
+fmt.Sprintf("{{hierarchy[-1]['rn']}}",{% for arg in hierarchy[-1]['args'].keys()|list %}{{arg}}{% if loop.index != hierarchy[-1]['args'].keys()|list|length %}, {%endif%}{% endfor %})
 {%- endset %}
 
 const {{class|capitalize}}ClassName = "{{class}}"
@@ -37,8 +37,15 @@ type {{doc.slug_label}} struct {
 }
   {%if pkeys|length != 0 %}
 type {{doc.slug_label}}Attributes struct {
-    {% for key in pkeys.keys() -%}
+	{% for arg in hierarchy[-1]['args'].keys()|list %}
+	{% if arg %}
+	{{ arg|capital }} string `json:",omitempty"`
+	{% endif %}
+	{% endfor %}
+    {% for key in pkeys.keys()|list -%}
+	{% if key|snakify not in hierarchy[-1]['args'].keys()|list %}
 	{{key|capital}}       string `json:",omitempty"`
+	{% endif %}
     {% endfor %}
 }
   {%endif %} 
@@ -53,7 +60,7 @@ func New{{doc.slug_label}}({{class}}Rn, parentDn, description string, {{class}}a
 			ClassName:         {{class|capitalize}}ClassName,
 			Rn:                {{class}}Rn,
 		},
-        {%if pkeys|length != 0 %}
+        {%if pkeys|length != 0 or hierarchy[-1]['args'].keys()|list != 0%}
 		{{doc.slug_label}}Attributes: {{class}}attr,
         {% endif %} 
 	}
@@ -65,8 +72,15 @@ func ({{class}} *{{doc.slug_label}}) ToMap() (map[string]string, error) {
 		return nil, err
 	}
 
-    {% for key in pkeys.keys() -%}
-	A({{class}}Map, "{{key}}",{{class}}.{{key|capital}})
+	{% for arg in hierarchy[-1]['args'].keys()|list %}
+	{% if arg %}
+	A({{class}}Map, "{{hierarchy[-1]['args'][arg]}}",{{class}}.{{arg|capital}})
+	{% endif %}
+	{% endfor %}
+    {% for key in pkeys.keys()|list -%}
+	{% if key|snakify not in hierarchy[-1]['args'].keys()|list %}
+	A({{class}}Map, "{{pkeys[key]['payload']}}",{{class}}.{{key|capital}})
+	{% endif %}
     {% endfor %}
 	
 
@@ -86,8 +100,15 @@ func {{doc.slug_label}}FromContainerList(cont *container.Container, index int) *
 		},
         {%if pkeys|length != 0 %}
 		{{doc.slug_label}}Attributes{
-        {% for key in pkeys.keys() -%}
-	        {{key|capital}} : G({{doc.slug_label}}Cont, "{{key}}"),
+		{% for arg in hierarchy[-1]['args'].keys()|list %}
+		{% if arg %}
+			{{arg|capital}} : G({{doc.slug_label}}Cont, "{{hierarchy[-1]['args'][arg]}}"),
+		{% endif %}
+		{% endfor %}
+        {% for key in pkeys.keys()|list -%}
+		{% if key|snakify not in hierarchy[-1]['args'].keys()|list %}
+	        {{key|capital}} : G({{doc.slug_label}}Cont, "{{pkeys[key]['payload']}}"),
+		{% endif %}
         {% endfor %}		
         },
         {% endif %}
