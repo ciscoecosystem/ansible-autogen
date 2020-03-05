@@ -28,9 +28,9 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
         rn_format = unnamed_rn + klass_mo.rnFormat
         unnamed_rn = ""
 
-        delimiters = "(\{\[|\{).*?(\]\}|\})" #pattern to remove paramter names
-        replace = "\g<1>\g<2>"
-        flip_brackets = "(\{\[).*?(\]\})" #pattern to sub {[]} to [{}]
+        delimiters = r"(\{\[|\{).*?(\]\}|\})" #pattern to remove paramter names
+        replace = r"\g<1>\g<2>"
+        flip_brackets = r"(\{\[).*?(\]\})" #pattern to sub {[]} to [{}]
 
         rn_format = re.sub(delimiters, replace, rn_format)
         rn_format = re.sub(flip_brackets, "[{}]", rn_format)
