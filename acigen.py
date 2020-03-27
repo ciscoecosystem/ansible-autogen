@@ -6,6 +6,7 @@ import logging
 import re
 import json
 import pickle
+import pdb
 from utils import render
 from object_model import MIM, ModuleGenerationException
 from ansible_generator import gen_ansible_module
@@ -50,6 +51,7 @@ def writeObjectsToMap(context):
 
 attr_map = {}
 def main():
+    # pdb.set_trace()
     parser = argparse.ArgumentParser(description='Utility to create Module for a specified ACI class')
     parser.add_argument("-m","--meta", help="Location of the meta json file", required=True)
     group = parser.add_mutually_exclusive_group(required=True)

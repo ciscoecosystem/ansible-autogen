@@ -43,26 +43,42 @@ def set_hierarchy(all_parameters, classes, mim, target, kind="ansible"):
         # get variable names
         label = klass_mo.label.lower().replace(" ", "_") if klass_mo.label else (klass_mo.name.replace(":","")).replace("'","")
         label = label.replace("'","")
-        args = {}
-        for prop in props:
-            if klass != target:
-                # import pdb; pdb.set_trace()
-                details = { 'options': klass_mo.properties[prop]['options'],
-                            'naming': True,
-                            'help': klass_mo.properties[prop]['help']}
-                var = label if prop == "name" else "{0}_{1}".format(label, prop)
-                if var in not_allowed:
-                    args["{0}_{1}".format(label,var)] = var
+        if kind == "terraform":
+            args = {}
+            for prop in props:
+                if klass != target:
+                    # import pdb; pdb.set_trace()
+                    details = { 'options': klass_mo.properties[prop]['options'],
+                                'naming': True,
+                                'help': klass_mo.properties[prop]['help']}
+                    var = label if prop == "name" else "{0}_{1}".format(label, prop)
+                    if var in not_allowed:
+                        args["{0}_{1}".format(label,var)] = var
+                    else:
+                        args[var] = var
+                    details['var'] = var
+                    all_parameters[var] = details
                 else:
-                    args[var] = var
-                details['var'] = var
-                all_parameters[var] = details
-            else:
-                all_parameters[prop]['naming'] = True
-                if all_parameters[prop]['var'] in not_allowed:
-                    args["{0}_{1}".format(label,all_parameters[prop]['var'])] = all_parameters[prop]['var']
+                    all_parameters[prop]['naming'] = True
+                    if all_parameters[prop]['var'] in not_allowed:
+                        args["{0}_{1}".format(label,all_parameters[prop]['var'])] = all_parameters[prop]['var']
+                    else:
+                        args[all_parameters[prop]['var']] = all_parameters[prop]['var']
+        else:
+            args = []
+            for prop in props:
+                if klass != target:
+                    # import pdb; pdb.set_trace()
+                    details = { 'options': klass_mo.properties[prop]['options'],
+                                'naming': True,
+                                'help': klass_mo.properties[prop]['help']}
+                    var = label if prop == "name" else "{0}_{1}".format(label, prop)
+                    args.append(var)
+                    details['var'] = var
+                    all_parameters[var] = details
                 else:
-                    args[all_parameters[prop]['var']] = all_parameters[prop]['var']
+                    all_parameters[prop]['naming'] = True
+                    args.append(all_parameters[prop]['var'])
         
         if kind == "terraform":
             if len(args) == 0:
