@@ -220,7 +220,7 @@ def gen_ansible_module(classes, meta):
     for klass, value in model.items():
         print("Creating module for {0}".format(klass))
         # out = "generated_{0}_module.py".format(klass)
-        out = "auto_{}.py".format(klass)
+        out = "aci_{}.py".format(klass)
 
         if value.isAbstract: # use abstract template
             context = {'klass': klass, 'name': value.name, 'label': value.label, 'description': value.help, 'filename': out}
