@@ -1,0 +1,20 @@
+{
+    "classes": {
+        "fvTenant": {
+            "filename": "aci_tenant.py",
+            "label": "Tenant Object",
+            "keys": {
+                "annotation": "tags",
+                "descr": "description",
+                "name": "name",
+                "nameAlias": "tenant_name_alias",
+                "ownerKey": "owner_key",
+                "ownerTag": "owner_tag"
+            },
+            "relations": {
+                "fvRsTnDenyRule": "tenant_to_deny_rule",
+                "fvRsTenantMonPol": "tenant_to_monitoring_policy"
+            }
+        }
+    }
+}

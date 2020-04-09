@@ -4,6 +4,8 @@ import argparse
 import sys
 import logging
 import re
+import json
+import os
 import os.path as p
 from jinja2 import Environment, FileSystemLoader
 from object_model import MIM, ModuleGenerationException
@@ -211,6 +213,32 @@ def get_context(mim, mo, kind):
     context["relationTo"] = relContext
     return context
 
+def apply_ansible_filter(context):
+    mappings = {}
+    with open(f"{os.getcwd()}/ansible_mappings.json") as f:
+        mappings = json.load(f)
+    
+    current_class = mappings.get('classes').get(context['class'])
+    if current_class:
+        if current_class.get('filename'):
+            context['filename'] = current_class.get('filename')
+        for key, value in current_class.get('keys',{}).items():
+            allowed_key = key
+            if key in context['keys'].keys():
+                context['keys'][key]['human_name'] = value
+            if key in not_allowed:
+                allowed_key = "{0}_{1}".format(context['doc']['label'].replace(" ",""),key)
+            if allowed_key in context['pkeys'].keys():
+                context['pkeys'][key]['human_name'] = value 
+        for key, value  in current_class.get("relations", {}).items():
+            if key in context['relationTo'].keys():
+                context['relationTo'][key]['human_name'] = value  
+        if current_class.get('label'):
+            context['doc']['label'] = current_class.get('label')
+        return context
+    else:
+        # class is not there in the mappings, ignore filtering.
+        return context
 
 def gen_ansible_module(classes, meta):
     mim = MIM(meta)
@@ -230,9 +258,11 @@ def gen_ansible_module(classes, meta):
         else:
             context = get_ansible_context(mim, value)
             context['filename'] = out
+            context = apply_ansible_filter(context)
+            print(json.dumps(context))
             lines.append("{} {}".format(klass, context['dn']))
             try:
-                with open(out, 'w') as f:
+                with open(context['filename'], 'w') as f:
                     mod = render(p.join(PREFIX,'ansible_2.6_read_write.py.j2'), context)
                     f.write(mod)
             except ModuleGenerationException as e:

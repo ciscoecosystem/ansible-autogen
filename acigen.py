@@ -7,9 +7,10 @@ import re
 import json
 import pickle
 import pdb
+import os
 from utils import render
 from object_model import MIM, ModuleGenerationException
-from ansible_generator import gen_ansible_module
+from ansible_generator import gen_ansible_module, get_ansible_context
 from terraform_generator import *
 # ====================================================================================
 # Logging
@@ -56,6 +57,7 @@ def main():
     parser.add_argument("-m","--meta", help="Location of the meta json file", required=True)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--ansible', action='store_true', help='generate code for ansible module')
+    group.add_argument('--update_ansible_mappings', action='store_true', help='generate ansible mappins for filtering.')
     group.add_argument('--terraform', action='store_true', help='generate model and service code for terraform provider')
     class_input_group = parser.add_mutually_exclusive_group(required=True)
     class_input_group.add_argument('-c', '--class', help='name of the class that the output module will manipulate', dest='klass')
@@ -81,6 +83,9 @@ def main():
         # print(json.dumps(doc.terraform_get_context()))
         if args.ansible:
             classes = gen_ansible_module(classes, meta)
+        
+        elif args.update_ansible_mappings:
+            update_ansible_maps(classes, meta)
 
         elif args.terraform:
 
@@ -99,6 +104,33 @@ def main():
         logger.error(e)
 
     logger.info("Successfully created module for {0}".format(classes))
+
+def update_ansible_maps(classes, meta):
+    mappings = {}
+    with open(f"{os.getcwd()}/ansible_mappings.json") as outfile:
+        mappings = json.load(outfile)
+        outfile.close()
+    print(mappings)
+    mim = MIM(meta)
+    model = {klass: mim.get_class(klass) for klass in classes}
+    mapper_dict = {}
+    for klass, value in model.items():
+        context = get_ansible_context(mim, value)
+        mapper_dict['filename'] = f"aci_{klass}.py"
+        mapper_dict['label'] = context['doc']['label']
+        mapper_dict['keys'] = {}
+        for key, value in context['keys'].items():
+            mapper_dict['keys'].update({key: key})
+        mapper_dict['relations'] = {}
+        for key, value in context['relationTo'].items():
+            mapper_dict['relations'].update({key: key})
+        mappings['classes'][context['class']] = mapper_dict.copy()
+        mapper_dict = {}
+    with open(f"{os.getcwd()}/ansible_mappings.json", 'w') as outfile:
+        json.dump(mappings, outfile)
+        outfile.close()
+
+
 
 if __name__ == '__main__':
     main()

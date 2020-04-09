@@ -17,7 +17,7 @@ author:
 - Devarshi Shah (@devarshishah3)
 version_added: '2.7'
 options: {% for key, value in keys.items() %}
-  {{key}}:
+  {{value.human_name}}:
     description:
     - {{value.help}} {% if value.aliases %}
     aliases: [ {% for x in value.aliases %}{%if not loop.last %}{{x}}, {% endif %}{% endfor %}{{value.aliases[-1]}} ] {% endif %}{% if value.options %}
@@ -43,17 +43,17 @@ from ansible.module_utils.basic import AnsibleModule
 def main():
     argument_spec = aci_argument_spec()
     argument_spec.update({ {% for key, value in keys.items()%}
-        '{{key}}': dict(type='str',{%if value['options']|length > 0 %} choices={{value['options']}}, {% endif %}{%if value['aliases']|length > 0 %} aliases={{value['aliases']}}{% endif %}),{% endfor %}
+        '{{value.human_name}}': dict(type='str',{%if value['options']|length > 0 %} choices={{value['options']}}, {% endif %}{%if value['aliases']|length > 0 %} aliases={{value['aliases']}}{% endif %}),{% endfor %}
         'state': dict(type='str', default='present', choices=['absent', 'present', 'query']),
 {% for rel,relContext in relationTo.items() %}
     {%- if relContext["cardinality"] == 'ONE_TO_ONE' or relContext["cardinality"] == 'N_TO_ONE' -%}
         {%- if relContext['doc']['identifiedBy']|length > 1 %}
-        'relation_{{ rel|snakify }}': dict(type='dict'),
+        '{{ relContext.human_name }}': dict(type='dict'),
         {%- else %}
-        'relation_{{ rel|snakify }}': dict(type='str'),
+        '{{ relContext.human_name }}': dict(type='str'),
         {%- endif %}
     {%- else %}
-        'relation_{{ rel|snakify }}': dict(type='list'),
+        '{{ relContext.human_name }}': dict(type='list'),
     {%- endif %}
 {% endfor %}
     })
@@ -62,16 +62,16 @@ def main():
         argument_spec=argument_spec,
         supports_check_mode=True,
         required_if=[ {% if doc.deletable %}
-            ['state', 'absent', [{% for key, value in keys.items() %}{% if value['naming']==true %}'{{key}}', {% endif %}{% endfor %}]], {% endif %}
-            ['state', 'present', [{% for key, value in keys.items() %}{% if value['naming']==true %}'{{key}}', {% endif %}{% endfor %}]],
+            ['state', 'absent', [{% for key, value in keys.items() %}{% if value['naming']==true %}'{{value.human_name}}', {% endif %}{% endfor %}]], {% endif %}
+            ['state', 'present', [{% for key, value in keys.items() %}{% if value['naming']==true %}'{{value.human_name}}', {% endif %}{% endfor %}]],
         ],
     )
     {% for key, value in keys.items() %}
-    {{value.var}} = module.params['{{key}}']{% endfor %}
+    {{value.var}} = module.params['{{value.human_name}}']{% endfor %}
     state = module.params['state']
     child_configs=[]
     {% for rel,relContext in relationTo.items() %}
-    relation_{{ rel|lower }} = module.params['relation_{{ rel|snakify }}']
+    relation_{{ rel|lower }} = module.params['{{ relContext.human_name }}']
     {%- endfor -%}
 
 {% for rel,relContext in relationTo.items() %}
