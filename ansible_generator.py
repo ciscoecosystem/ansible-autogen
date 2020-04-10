@@ -229,7 +229,7 @@ def apply_ansible_filter(context):
             if key in not_allowed:
                 allowed_key = "{0}_{1}".format(context['doc']['label'].replace(" ",""),key)
             if allowed_key in context['pkeys'].keys():
-                context['pkeys'][key]['human_name'] = value 
+                context['pkeys'][allowed_key]['human_name'] = value 
         for key, value  in current_class.get("relations", {}).items():
             if key in context['relationTo'].keys():
                 context['relationTo'][key]['human_name'] = value  
